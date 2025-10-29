@@ -100,14 +100,24 @@
     </div>
   </aside>
 
-  <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+  <header class="border-b border-gray-200 dark:border-gray-800"
+    :class="{ 'bg-white dark:bg-gray-900': !isScrolled }"
+  >
     <div class="mx-auto">
       <!-- Desktop Header -->
       <div class="hidden lg:block py-6">
         <!-- Row 1: Centered Logo -->
-        <div class="flex justify-center mb-6 px-6 border-b pb-6 border-gray-200 dark:border-gray-800">
+        <div
+          class="flex justify-center px-6 border-b border-gray-200 dark:border-gray-800 transition-all duration-300"
+          :class="isScrolled ? 'mb-2 pb-3' : 'mb-6 pb-6'"
+        >
           <NuxtLink to="/" class="flex items-center">
-            <span class="text-4xl font-title font-bold text-black dark:text-white">Woords®</span>
+            <span
+              class="font-title font-bold text-black dark:text-white transition-all duration-300"
+              :class="isScrolled ? 'text-3xl' : 'text-4xl'"
+            >
+              Woords®
+            </span>
           </NuxtLink>
         </div>
 
@@ -209,6 +219,8 @@
 <script setup lang="ts">
 const isMobileMenuOpen = ref(false)
 const colorMode = useColorMode()
+import { useHeaderScroll } from '../../composables/useHeaderScroll'
+const { isScrolled } = useHeaderScroll({ threshold: 12 })
 
 function toggleMobileMenu() {
   isMobileMenuOpen.value = !isMobileMenuOpen.value

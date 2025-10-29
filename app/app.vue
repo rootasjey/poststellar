@@ -1,15 +1,13 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-white dark:bg-gray-950 font-text">
+  <div>
     <NuxtRouteAnnouncer />
-    <AppHeader />
-    <main class="flex-1">
+    <NuxtLayout>
       <NuxtPage />
-    </main>
-    <AppFooter />
+    </NuxtLayout>
   </div>
+  
 </template>
 
 <script setup lang="ts">
-import AppHeader from './components/AppHeader.vue'
-import AppFooter from './components/AppFooter.vue'
+// App-wide wrappers (header/footer) are now handled by the default layout.
 </script>
