@@ -5,12 +5,6 @@ export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4,
   },
-  components: [
-    {
-      path: '~/app/components',
-      pathPrefix: false,
-    },
-  ],
   hub: {
     blob: true,
     cache: true,
@@ -24,6 +18,7 @@ export default defineNuxtConfig({
     '@nuxthub/core',
     '@pinia/nuxt',
     'nuxt-auth-utils',
+    '@nuxtjs/color-mode',
   ],
   unocss: {
     preflight: true,
@@ -55,5 +50,10 @@ export default defineNuxtConfig({
   una: {
     prefix: "N",
     themeable: true,
+  },
+  colorMode: {
+    classSuffix: '',
+    preference: 'light',
+    fallback: 'light',
   },
 })

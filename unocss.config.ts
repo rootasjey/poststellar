@@ -28,11 +28,11 @@ export default {
     presetWebFonts({
       provider: 'fontshare',
       fonts: {
-        title: 'Khand',
-        text: 'Satoshi',
-        body: 'Pilcrow Rounded',
-        serif: 'Pencerio',
-        sense: 'General Sans',
+        title: 'Clash Display',
+        text: 'General Sans',
+        body: 'Satoshi',
+        serif: 'Zodiak',
+        sans: 'General Sans',
       },
     }),
     presetAnimations(),
