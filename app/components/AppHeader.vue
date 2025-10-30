@@ -100,8 +100,8 @@
     </div>
   </aside>
 
-  <header class="border-b border-gray-200 dark:border-gray-800"
-    :class="{ 'bg-white dark:bg-gray-900': !isScrolled }"
+  <header class="border-b"
+    :class="{ 'bg-[#F8F9FA] dark:bg-gray-900': !isScrolled }"
   >
     <div class="mx-auto">
       <!-- Desktop Header -->
@@ -163,21 +163,21 @@
 
           <!-- Right: Auth + Search + Theme -->
           <div class="flex items-center gap-3">
-            <NuxtLink to="/signin" class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors">
+            <NuxtLink to="/signin" class="text-sm font-600 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors">
               Sign in
             </NuxtLink>
-            <NuxtLink to="/subscribe" class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wide rounded hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors">
+            <NuxtLink to="/subscribe" class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wide rounded-4 hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors">
               SUBSCRIBE
             </NuxtLink>
             <button class="text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors">
-              <div class="i-ph-magnifying-glass w-5 h-5"></div>
+              <div class="i-ph-magnifying-glass-bold"></div>
             </button>
             <button 
               @click="toggleTheme" 
               class="text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors"
             >
-              <div v-if="colorMode.value === 'light'" class="i-ph-moon w-5 h-5"></div>
-              <div v-else class="i-ph-sun w-5 h-5"></div>
+              <div v-if="colorMode.value === 'light'" class="i-ph-moon-bold"></div>
+              <div v-else class="i-ph-sun-bold"></div>
             </button>
           </div>
         </div>

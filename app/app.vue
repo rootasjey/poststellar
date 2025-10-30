@@ -5,9 +5,9 @@
       <NuxtPage />
     </NuxtLayout>
   </div>
-  
 </template>
 
 <script setup lang="ts">
-// App-wide wrappers (header/footer) are now handled by the default layout.
+import '@una-ui/preset/una.css'
+import '@/styles/main.css'
 </script>

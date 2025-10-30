@@ -12,16 +12,18 @@
               v-model="email"
               type="email"
               placeholder="Email address"
-              class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-900 border-0 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              class="w-full px-5 py-3.5 bg-gray-50 dark:bg-gray-900 border-0 rounded-full 
+                font-600 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
               required
             />
-            <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">subscribe</span>
+            <!-- <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">subscribe</span> -->
           </div>
           <button
             type="submit"
-            class="sm:w-auto px-6 py-3.5 bg-yellow-400 hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400 rounded-lg font-medium text-sm transition-colors text-black"
+            class="sm:w-auto px-6 bg-yellow-400 hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400 
+              rounded-full uppercase font-medium text-size-3 font-600 transition-colors text-black"
           >
-            →
+          <span>subscribe</span>
           </button>
         </div>
       </form>

@@ -1,8 +1,10 @@
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center py-12 px-6 bg-gray-50 dark:bg-gray-950">
+  <div class="min-h-screen flex flex-col items-center py-12 px-6 bg-gray-50 dark:bg-gray-950">
     <!-- Logo -->
     <NuxtLink to="/" class="mb-12">
-      <span class="font-title text-4xl font-bold text-black dark:text-white">Woords®</span>
+      <span class="font-title text-4xl font-bold text-black dark:text-white">
+        Start your journey
+      </span>
     </NuxtLink>
 
     <!-- Card -->

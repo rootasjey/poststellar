@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col bg-white dark:bg-gray-950 font-text">
     <header
-      class="sticky top-0 z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur border-b border-gray-200/60 dark:border-gray-800/60 transition-all duration-300"
+      class="sticky top-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur transition-all duration-300"
       :class="[
         isScrolled ? 'shadow-sm' : '',
         (isScrolled && isScrollingDown) ? '-translate-y-full' : 'translate-y-0'

@@ -1,14 +1,15 @@
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center py-12 px-6 bg-gray-50 dark:bg-gray-950">
+  <div class="min-h-screen flex flex-col items-center py-12 px-6 bg-gray-50 dark:bg-gray-950">
+
     <!-- Logo -->
     <NuxtLink to="/" class="mb-12">
-      <span class="font-title text-4xl font-bold text-black dark:text-white">Woords®</span>
+      <span class="font-title text-4xl font-bold text-black dark:text-white">Welcome back</span>
     </NuxtLink>
 
     <!-- Card -->
     <div class="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-10">
       <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-black dark:text-white mb-2">Welcome back</h1>
+        <h1 class="text-3xl font-bold text-black dark:text-white mb-2">Login</h1>
         <p class="text-sm text-gray-500 dark:text-gray-400">Welcome back! Please enter your details.</p>
       </div>
 
