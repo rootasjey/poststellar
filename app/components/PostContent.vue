@@ -177,9 +177,14 @@
     />
 
     <EditorContent :editor="editor" />
-    <DragHandle v-if="editor && editable" :editor="editor">
-      <NIcon name="i-ph-dots-six-vertical-bold" />
-    </DragHandle>
+    
+    <NDropdownMenu v-if="editor && editable" :items="dragMenuItems" class="drag-handle-dropdown">
+      <template #default>
+        <DragHandle :editor="editor" @click.stop>
+          <NIcon name="i-ph-dots-six-vertical-bold" />
+        </DragHandle>
+      </template>
+    </NDropdownMenu>
   </div>
 </template>
 
@@ -658,6 +663,135 @@ const deleteSlashIfPresent = () => {
   }
 }
 
+// ========================
+// Helpers for drag-handle menu
+// ========================
+const getCurrentBlock = () => {
+  const ed = editor.value
+  if (!ed) return null
+
+  const { $from } = ed.state.selection as any
+  // Walk up from the deepest resolved node to find the first block node
+  for (let d = $from.depth; d > 0; d--) {
+    try {
+      const node = $from.node(d)
+      if (node && node.isBlock) {
+        const start = $from.start(d)
+        const end = start + node.nodeSize
+        return { node, start, end, depth: d }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // fallback: return root doc as a block
+  const root = ed.state.doc
+  return { node: root, start: 0, end: root.content.size, depth: 0 }
+}
+
+const duplicateNode = async () => {
+  if (!editor.value) return
+  const cur = getCurrentBlock()
+  if (!cur || !cur.node) return
+
+  try {
+    const json = cur.node.toJSON()
+    // insert after the existing node
+    await editor.value.chain().focus().insertContentAt(cur.end, json).run()
+  } catch (err) {
+    // ignore
+  }
+}
+
+const copyBlockToClipboard = async () => {
+  if (!editor.value) return
+  const ed = editor.value
+  const cur = getCurrentBlock()
+  if (!cur) return
+
+  // Save current selection so we can restore it
+  const previousSelection = ed.state.selection
+
+  try {
+    // Select the node's content (avoid the wrapper boundaries)
+    const from = Math.min(cur.start + 1, cur.end)
+    const to = Math.max(cur.end - 1, from)
+    ed.chain().focus().setTextSelection({ from, to }).run()
+
+    // Try to copy using the browser copy command (copies rich/html if supported)
+    let copied = false
+    try {
+      copied = document.execCommand('copy')
+    } catch (e) {
+      copied = false
+    }
+
+    // fallback: copy plain text via navigator.clipboard
+    if (!copied) {
+      let text = ''
+      try {
+        // prefer node-level textual content; fallback to editor text
+        text = cur.node?.textContent ?? ed.getText()
+      } catch (e) {
+        text = ed.getText()
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text)
+      }
+    }
+  } finally {
+    // restore the previous selection
+    try {
+      const tr = ed.state.tr.setSelection(previousSelection)
+      ed.view.dispatch(tr)
+      ed.chain().focus().run()
+    } catch (e) {
+      // ignore
+    }
+  }
+}
+
+const deleteBlock = () => {
+  if (!editor.value) return
+  const ed = editor.value
+  const cur = getCurrentBlock()
+  if (!cur) return
+
+  try {
+    const tr = ed.state.tr.delete(cur.start, cur.end)
+    ed.view.dispatch(tr)
+    // place caret at start of deleted range
+    ed.chain().focus().setTextSelection(cur.start).run()
+  } catch (e) {
+    // ignore
+  }
+}
+
+const applyColorToBlock = (color: string) => {
+  if (!editor.value) return
+  const ed = editor.value
+  const cur = getCurrentBlock()
+  if (!cur) return
+
+  // select block content and set color mark
+  const from = Math.min(cur.start + 1, cur.end)
+  const to = Math.max(cur.end - 1, from)
+  ed.chain().focus().setTextSelection({ from, to }).setColor(color).run()
+}
+
+const turnIntoBlock = (typeLabel: string) => {
+  if (!editor.value) return
+  const ed = editor.value
+
+  // map label -> block action from blockTypes
+  const mapping = blockTypes.find(bt => bt.label === typeLabel)
+  if (mapping && mapping.action) {
+    mapping.action()
+  }
+  ed.chain().focus().run()
+}
+
 const selectFloatingAction = async (item: FloatingAction, idx: number) => {
   if (!editor.value) return
   deleteSlashIfPresent()
@@ -821,6 +955,35 @@ const selectionBackgroundColor = computed(() => {
   if (!editor.value) return ''
   const ts = editor.value.getAttributes('textStyle') || {}
   return ts?.backgroundColor || ''
+})
+
+// Build menu items for the drag handle dropdown
+const dragMenuItems = computed(() => {
+  // Turn-into group (reuse the first 4 types — Text and Headings)
+  const turnIntoItems = blockTypes.slice(0, 4).map((t) => ({
+    label: t.label,
+    leading: t.icon,
+    onSelect: () => turnIntoBlock(t.label),
+  }))
+
+  // Color submenu (simple list of colors shown as surfaces)
+  const colorItems = palette.slice(0, 9).map((col) => ({
+    label: col,
+    onSelect: () => applyColorToBlock(col),
+  }))
+
+  return [
+    {
+      label: 'Heading',
+      items: [
+        { label: 'Color', items: colorItems },
+        { label: 'Turn Into', items: turnIntoItems },
+      ],
+    },
+    { label: 'Duplicate node', onSelect: duplicateNode, leading: 'i-lucide-copy' },
+    { label: 'Copy to clipboard', onSelect: copyBlockToClipboard, leading: 'i-lucide-clipboard' },
+    { label: 'Delete', onSelect: deleteBlock, leading: 'i-lucide-trash', color: 'danger' },
+  ]
 })
 
 const hasAnyColor = computed(() => {
@@ -991,6 +1154,10 @@ onBeforeUnmount(() => {
 
 .post-content .ProseMirror {
   @apply focus:outline-none border-none ring-none shadow-none;
+}
+
+.dark .post-content .ProseMirror.ProseMirror-noderangeselection.ProseMirror-hideselection {
+  @apply bg-[#F5E5E1];
 }
 
 /* Placeholder */
@@ -1183,6 +1350,19 @@ onBeforeUnmount(() => {
 /* Bubble Menu & Floating Menu */
 .bubble-menu, .floating-menu, .link-popover {
   @apply bg-background border border-border rounded-lg shadow-lg flex items-center gap-1 p-1;
+}
+
+/* Drag-handle dropdown styling */
+.drag-handle-dropdown .n-dropdown-menu__menu {
+  z-index: 70; /* above other editor overlays */
+  min-width: 200px;
+}
+
+.drag-handle-dropdown .n-dropdown-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
 }
 
 .menu-block-type .n-dropdown-menu__trigger {
