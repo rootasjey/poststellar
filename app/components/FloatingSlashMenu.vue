@@ -1,29 +1,4 @@
-<template>
-  <FloatingMenu
-    v-if="editor && editable"
-    :editor="editor"
-    :should-show="shouldShow"
-    class="floating-menu"
-    role="menubar"
-    aria-label="slash menu"
-    @keydown.stop.prevent="onKeydown"
-  >
-    <template v-for="(item, idx) in actions" :key="item.label">
-      <button
-        :ref="(el) => registerButton(el, idx)"
-        @click="onSelect(item, idx)"
-        :class="['menu-item', { 'is-active': item.isActive?.() } ]"
-        type="button"
-        role="menuitem"
-        tabindex="-1"
-        :title="item.label"
-      >
-        <span v-if="item.icon" :class="item.icon" aria-hidden="true" />
-        <span class="sr-only">{{ item.label }}</span>
-      </button>
-    </template>
-  </FloatingMenu>
-</template>
+<!-- top duplicate template removed; keeping single template below that includes file input -->
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onBeforeUnmount } from 'vue'
@@ -43,6 +18,7 @@ const props = withDefaults(defineProps<{
   editable?: boolean
   shouldShow?: any
   actions: FloatingAction[]
+  onInsertImages?: (files: FileList) => void
 }>(), {
   editable: false,
   shouldShow: () => false,
@@ -54,6 +30,7 @@ const emit = defineEmits<{
 
 const buttons = ref<HTMLButtonElement[]>([])
 const index = ref(-1)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const registerButton = (el: Element | ComponentPublicInstance | null, idx: number) => {
   if (!el) return
@@ -104,7 +81,20 @@ const onKeydown = (e: KeyboardEvent) => {
 }
 
 const onSelect = (item: FloatingAction, idx: number) => {
+  if (item.label === 'Image' && props.onInsertImages) {
+    // Trigger hidden file input for image selection
+    fileInput.value?.click()
+    return
+  }
   emit('select', item, idx)
+}
+
+function onFilesChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+  props.onInsertImages?.(input.files)
+  // Reset so selecting same file again triggers change
+  input.value = ''
 }
 
 // When the editor selection changes we re-evaluate the `shouldShow` predicate
@@ -123,6 +113,34 @@ watch(
   }
 )
 </script>
+
+<template>
+  <FloatingMenu
+    v-if="editor && editable"
+    :editor="editor"
+    :should-show="shouldShow"
+    class="floating-menu"
+    role="menubar"
+    aria-label="slash menu"
+    @keydown.stop.prevent="onKeydown"
+  >
+    <input ref="fileInput" type="file" accept="image/*" multiple class="hidden" @change="onFilesChange" />
+    <template v-for="(item, idx) in actions" :key="item.label">
+      <button
+        :ref="(el) => registerButton(el, idx)"
+        @click="onSelect(item, idx)"
+        :class="['menu-item', { 'is-active': item.isActive?.() } ]"
+        type="button"
+        role="menuitem"
+        tabindex="-1"
+        :title="item.label"
+      >
+        <span v-if="item.icon" :class="item.icon" aria-hidden="true" />
+        <span class="sr-only">{{ item.label }}</span>
+      </button>
+    </template>
+  </FloatingMenu>
+</template>
 
 <style scoped>
 .floating-menu .menu-item {

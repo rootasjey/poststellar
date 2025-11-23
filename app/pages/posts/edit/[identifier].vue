@@ -162,6 +162,7 @@
 import type { Post } from '~~/shared/types/post'
 import { watchDebounced, useDebounceFn, useTimeAgo } from '@vueuse/core'
 import { nextTick } from 'vue'
+import PostContent from '~/components/PostContent.vue'
 
 const route = useRoute()
 const router = useRouter()

@@ -1,6 +1,22 @@
 <template>
   <div class="min-h-screen py-12 md:py-16">
     <div class="container mx-auto px-4 md:px-8">
+      <!-- Admin Toolbar -->
+      <div v-if="isAdmin" class="flex flex-wrap items-center gap-3 mb-10 justify-between">
+        <div class="flex items-center gap-2 flex-wrap">
+          <NButton :to="'/posts/new'" btn="soft-gray" size="sm" leading="i-ph-plus-bold">New Post</NButton>
+          <NButton @click="toggleDrafts" btn="ghost-gray" size="sm" :leading="showDrafts ? 'i-ph-eye-slash' : 'i-ph-eye'">
+            {{ showDrafts ? 'Hide Drafts' : 'Show Drafts' }}
+          </NButton>
+          <NButton @click="toggleArchived" btn="ghost-gray" size="sm" :leading="showArchived ? 'i-ph-eye-slash' : 'i-ph-eye'">
+            {{ showArchived ? 'Hide Archived' : 'Show Archived' }}
+          </NButton>
+        </div>
+        <div class="text-xs opacity-60" v-if="draftsPending || archivedPending">
+          <span v-if="draftsPending" class="flex items-center gap-1"><span class="i-lucide-loader animate-spin" />Loading drafts…</span>
+          <span v-if="archivedPending" class="flex items-center gap-1 ml-3"><span class="i-lucide-loader animate-spin" />Loading archived…</span>
+        </div>
+      </div>
       <!-- Page Header -->
       <div v-if="(posts?.length || 0) > 0" class="text-center mb-12 md:mb-16">
         <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
@@ -11,7 +27,7 @@
         </p>
       </div>
 
-      <!-- Posts Grid -->
+      <!-- Published Posts Grid -->
       <div v-if="posts && posts.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
         <NuxtLink
           v-for="post in enhancedPosts"
@@ -106,6 +122,52 @@
           </NuxtLink>
         </div>
       </div>
+
+      <!-- Drafts Section -->
+      <div v-if="isAdmin && showDrafts && drafts?.length" class="mt-16">
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><span class="i-ph-file-text" />Drafts</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          <NuxtLink v-for="post in enhancedDrafts" :key="post.slug" :to="`/posts/${post.slug}`" class="group">
+            <article class="h-full flex flex-col bg-background rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
+              <div v-if="post.image?.src" class="aspect-[16/10] overflow-hidden">
+                <img :src="post.image.src" :alt="post.image.alt || post.name" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              </div>
+              <div class="flex-1 flex flex-col p-6">
+                <div class="flex items-center gap-2 mb-2"><NBadge badge="soft" color="gray">Draft</NBadge></div>
+                <h3 class="text-xl font-semibold mb-2 line-clamp-2">{{ post.name }}</h3>
+                <p v-if="post.description" class="text-muted mb-4 line-clamp-2 flex-1">{{ post.description }}</p>
+                <div class="flex items-center justify-between pt-4 border-t border-border">
+                  <span class="text-xs opacity-70">Updated {{ post.formattedDate }}</span>
+                  <span class="text-xs opacity-60">{{ post.readingTime }}</span>
+                </div>
+              </div>
+            </article>
+          </NuxtLink>
+        </div>
+      </div>
+
+      <!-- Archived Section -->
+      <div v-if="isAdmin && showArchived && archived?.length" class="mt-16">
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><span class="i-ph-archive" />Archived</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          <NuxtLink v-for="post in enhancedArchived" :key="post.slug" :to="`/posts/${post.slug}`" class="group">
+            <article class="h-full flex flex-col bg-background rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 opacity-80">
+              <div v-if="post.image?.src" class="aspect-[16/10] overflow-hidden grayscale">
+                <img :src="post.image.src" :alt="post.image.alt || post.name" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              </div>
+              <div class="flex-1 flex flex-col p-6">
+                <div class="flex items-center gap-2 mb-2"><NBadge badge="soft" color="gray">Archived</NBadge></div>
+                <h3 class="text-xl font-semibold mb-2 line-clamp-2">{{ post.name }}</h3>
+                <p v-if="post.description" class="text-muted mb-4 line-clamp-2 flex-1">{{ post.description }}</p>
+                <div class="flex items-center justify-between pt-4 border-t border-border">
+                  <span class="text-xs opacity-70">Updated {{ post.formattedDate }}</span>
+                  <span class="text-xs opacity-60">{{ post.readingTime }}</span>
+                </div>
+              </div>
+            </article>
+          </NuxtLink>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -114,15 +176,31 @@
 import type { Post } from '~~/shared/types/post'
 
 const { enhancePost } = usePost()
+const { user, loggedIn } = useUserSession()
 
 // Fetch posts from API
 const { data: posts, pending, error } = await useFetch<Post[]>('/api/posts')
+// Drafts & archived (lazy fetch on toggle)
+const { data: drafts, pending: draftsPending, execute: fetchDrafts } = useFetch<Post[]>('/api/posts/drafts', { immediate: false })
+const { data: archived, pending: archivedPending, execute: fetchArchived } = useFetch<Post[]>('/api/posts/archived', { immediate: false })
+
+const showDrafts = ref(false)
+const showArchived = ref(false)
+const isAdmin = computed(() => loggedIn.value && user.value?.role === 'admin')
+
+function toggleDrafts() {
+  showDrafts.value = !showDrafts.value
+  if (showDrafts.value && !drafts.value) fetchDrafts()
+}
+function toggleArchived() {
+  showArchived.value = !showArchived.value
+  if (showArchived.value && !archived.value) fetchArchived()
+}
 
 // Enhance posts with computed properties
-const enhancedPosts = computed(() => {
-  if (!posts.value) return []
-  return posts.value.map(post => enhancePost(post))
-})
+const enhancedPosts = computed(() => posts.value ? posts.value.map(p => enhancePost(p)) : [])
+const enhancedDrafts = computed(() => drafts.value ? drafts.value.map(p => enhancePost(p)) : [])
+const enhancedArchived = computed(() => archived.value ? archived.value.map(p => enhancePost(p)) : [])
 
 useHead({
   title: 'Posts - Woords',
