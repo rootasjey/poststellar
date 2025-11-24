@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <EditorBubbleMenu v-if="editor" :editor="editor" :block-types="blockTypes" />
+    <EditorBubbleMenu v-if="editor" :editor="editor" :block-types="blockTypes" :identifier="String(routeForUpload.params.identifier || '')" />
 
     <FloatingSlashMenu
       v-if="editor"
@@ -33,13 +33,7 @@
 
     <EditorContent v-if="editor" :editor="editor" />
 
-    <NDropdownMenu v-if="editor" :items="dragMenuItems" class="drag-handle-dropdown">
-      <template #default>
-        <DragHandle :editor="editor" @click.stop>
-          <NIcon name="i-ph-dots-six-vertical-bold" />
-        </DragHandle>
-      </template>
-    </NDropdownMenu>
+    <EditorDragHandleMenu v-if="editor" :editor="editor" :block-types="blockTypes" />
   </div>
 </template>
 
@@ -54,13 +48,12 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Image from '@tiptap/extension-image'
 import NodeRange from '@tiptap/extension-node-range'
-import DragHandle from '@tiptap/extension-drag-handle-vue-3'
+import EditorDragHandleMenu from './EditorDragHandleMenu.vue'
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
 import FileHandler from '@tiptap/extension-file-handler'
 import { watch, onBeforeUnmount, computed } from 'vue'
 import FloatingSlashMenu from '../FloatingSlashMenu.vue'
 import EditorBubbleMenu from './EditorBubbleMenu.vue'
-import { textPalette } from './palette'
 import { useRoute } from '#imports'
 import type { EditorState } from '@tiptap/pm/state'
 
@@ -215,69 +208,6 @@ function shouldShowFloatingMenu(props: any) {
   try { return state.doc.textBetween(pos - 1, pos, '', '\n') === '/' } catch { return false }
 }
 
-function applyColorToBlock(color: string) {
-  if (!editor.value) return
-  const ed = editor.value
-  const { $from } = ed.state.selection as any
-  for (let d = $from.depth; d > 0; d--) {
-    const node = $from.node(d); if (node && node.isBlock) {
-      const start = $from.start(d); const end = start + node.nodeSize
-      const from = Math.min(start + 1, end); const to = Math.max(end - 1, from)
-      ed.chain().focus().setTextSelection({ from, to }).setColor(color).run(); return
-    }
-  }
-}
-function duplicateNode() {
-  if (!editor.value) return
-  const ed = editor.value
-  const { $from } = ed.state.selection as any
-  for (let d = $from.depth; d > 0; d--) {
-    const node = $from.node(d); if (node && node.isBlock) {
-      const start = $from.start(d); const end = start + node.nodeSize
-      const json = node.toJSON(); ed.chain().focus().insertContentAt(end, json).run(); return
-    }
-  }
-}
-function copyBlockToClipboard() {
-  if (!editor.value) return
-  const ed = editor.value
-  const curSel = ed.state.selection
-  try {
-    const { $from } = curSel as any
-    for (let d = $from.depth; d > 0; d--) {
-      const node = $from.node(d); if (node && node.isBlock) {
-        const start = $from.start(d); const end = start + node.nodeSize
-        const from = Math.min(start + 1, end); const to = Math.max(end - 1, from)
-        ed.chain().focus().setTextSelection({ from, to }).run()
-        let copied = false
-        try { copied = document.execCommand('copy') } catch { copied = false }
-        if (!copied) {
-          const text = node.textContent || ed.getText()
-          if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text)
-        }
-        const tr = ed.state.tr.setSelection(curSel); ed.view.dispatch(tr); ed.chain().focus().run(); return
-      }
-    }
-  } catch {}
-}
-
-function deleteBlock() {
-  if (!editor.value) return
-  const ed = editor.value
-  const { $from } = ed.state.selection as any
-  for (let d = $from.depth; d > 0; d--) {
-    const node = $from.node(d); if (node && node.isBlock) {
-      const start = $from.start(d); const end = start + node.nodeSize
-      const tr = ed.state.tr.delete(start, end); ed.view.dispatch(tr); ed.chain().focus().setTextSelection(start).run(); return
-    }
-  }
-}
-
-const dragMenuItems = computed(() => {
-  const turnIntoItems = blockTypes.slice(0,4).map(t => ({ label: t.label, leading: t.icon, onSelect: () => t.action() }))
-  const colorItems = textPalette.slice(0,9).map(col => ({ label: col, onSelect: () => applyColorToBlock(col) }))
-  return [ { label: 'Heading', items: [ { label: 'Color', items: colorItems }, { label: 'Turn Into', items: turnIntoItems } ] }, { label: 'Duplicate node', onSelect: duplicateNode, leading: 'i-lucide-copy' }, { label: 'Copy to clipboard', onSelect: copyBlockToClipboard, leading: 'i-lucide-clipboard' }, { label: 'Delete', onSelect: deleteBlock, leading: 'i-lucide-trash', color: 'danger' } ]
-})
 
 function addImage() {
   // Fallback: prompt for URL if file picker not available

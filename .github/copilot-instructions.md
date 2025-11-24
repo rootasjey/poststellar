@@ -119,6 +119,7 @@ Migrations: All schema changes must be done via SQL migrations in server/databas
    - Abortable or client-only helpers: `useAbortableFetch` or `isClient` guards are useful when you need to prevent server-side execution.
  - Note: Some `@vueuse` utilities are client-only; when in doubt, guard with `if (process.client)` or `if (useNuxtApp().isClient)`. Also prefer composables for simpler tests and re-use.
 - Deprecated API: Do not use process.client (deprecated). Use import.meta.client instead for client-side checks.
+- Use context7 to check API library docs and examples when unsure about usage.
 
 ### TypeScript guidance (avoid `as any`)
 
