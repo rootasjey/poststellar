@@ -8,6 +8,16 @@
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import { TextStyle, BackgroundColor } from '@tiptap/extension-text-style'
+import Color from '@tiptap/extension-color'
+import Highlight from '@tiptap/extension-highlight'
+import NodeRange from '@tiptap/extension-node-range'
+import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
+import Separator from './Separator'
+import { VueNodeViewRenderer } from '@tiptap/vue-3'
+import TaskItemNodeView from './TaskItemNodeView.vue'
 import Image from '@tiptap/extension-image'
 import { watch } from 'vue'
 
@@ -29,6 +39,18 @@ const editor = useEditor({
       heading: { levels: [1, 2, 3, 4] },
     }),
     Image,
+    TextStyle,
+    BackgroundColor,
+    Color,
+    Highlight.configure({ multicolor: true }),
+    NodeRange,
+    Table,
+    TableRow,
+    TableHeader,
+    TableCell,
+    TaskList,
+    TaskItem.extend({ addNodeView() { return VueNodeViewRenderer(TaskItemNodeView) } }),
+    Separator,
     Placeholder.configure({
       placeholder: ({ node }) => {
         if (node.type.name === 'paragraph') return 'Loading content…'

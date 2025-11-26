@@ -2,7 +2,10 @@
 import { z } from 'zod'
 
 const updatePostSchema = z.object({
-  name: z.string().min(1).max(255),
+  // Allow partial updates — make `name` optional for metadata-only updates
+  // (e.g. updating just the slug). Creating a post still requires a name, but
+  // updates should permit changing any subset of fields.
+  name: z.string().min(1).max(255).optional(),
   description: z.string().max(1000).optional(),
   tags: z.array(z.object({
     name: z.string().min(1).max(50),

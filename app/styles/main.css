@@ -1,23 +1,23 @@
 @import './editor.css';
 
 /* Global text selection styling */
-::selection {
+::selection:not(.dims) {
   color: white;
   background-color: #2D292E;
 }
 
-::-moz-selection {
+::-moz-selection:not(.dims) {
   color: white;
   background-color: #2D292E;
 }
 
 /* Dark mode text selection */
-.dark ::selection {
+.dark ::selection:not(.dims) {
   color: #2D292E;
   background-color: #E7E5E4;
 }
 
-.dark ::-moz-selection {
+.dark ::-moz-selection:not(.dims) {
   color: #2D292E;
   background-color: #E7E5E4;
 }

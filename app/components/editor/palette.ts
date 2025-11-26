@@ -39,3 +39,32 @@ export const backgroundPalette = [
 ]
 
 export const DEFAULT_HIGHLIGHT = '#fef3c7'
+
+// Human-friendly labels for the editor palettes. These are kept alongside the
+// color arrays so multiple components can reuse the same labels.
+export const colorLabelMap: Record<string, string> = {
+  '#111827': 'Dark text',
+  '#374151': 'Gray text',
+  '#6B7280': 'Muted text',
+  '#ef4444': 'Red text',
+  '#f97316': 'Orange text',
+  '#f59e0b': 'Yellow text',
+  '#10b981': 'Green text',
+  '#3b82f6': 'Blue text',
+  '#6366f1': 'Indigo text',
+  '#8b5cf6': 'Purple text',
+  '#ec4899': 'Pink text',
+}
+
+export const backgroundLabelMap: Record<string, string> = {
+  '#fff7ed': 'Warm background',
+  '#ffedd5': 'Peach background',
+  '#fef3c7': 'Sunny background',
+  '#ecfeff': 'Cyan background',
+  '#ecfccb': 'Lime background',
+  '#eef2ff': 'Indigo background',
+  '#FEEBF6': 'Soft pink background',
+  '#EBD6FB': 'Lavender background',
+  '#8F87F1': 'Periwinkle background',
+  '#C68EFD': 'Lilac background',
+}

@@ -32,8 +32,7 @@
     />
 
     <EditorContent v-if="editor" :editor="editor" />
-
-    <EditorDragHandleMenu v-if="editor" :editor="editor" :block-types="blockTypes" />
+    <EditorDragHandleMenu v-if="editor" :editor="editor" :block-types="blockTypes" :identifier="String(routeForUpload.params.identifier || '')" />
   </div>
 </template>
 
@@ -46,16 +45,20 @@ import Color from '@tiptap/extension-color'
 import Highlight from '@tiptap/extension-highlight'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
-import Image from '@tiptap/extension-image'
+import { VueNodeViewRenderer } from '@tiptap/vue-3'
+import TaskItemNodeView from './TaskItemNodeView.vue'
+import { CustomImage } from './CustomImage'
 import NodeRange from '@tiptap/extension-node-range'
+import Separator from './Separator'
 import EditorDragHandleMenu from './EditorDragHandleMenu.vue'
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
 import FileHandler from '@tiptap/extension-file-handler'
-import { watch, onBeforeUnmount, computed } from 'vue'
+import { watch, onBeforeUnmount, computed, toRaw } from 'vue'
 import FloatingSlashMenu from '../FloatingSlashMenu.vue'
 import EditorBubbleMenu from './EditorBubbleMenu.vue'
 import { useRoute } from '#imports'
 import type { EditorState } from '@tiptap/pm/state'
+import type { BlockType } from '~~/shared/types/nodes'
 
 interface Props { content: string | object }
 const props = defineProps<Props>()
@@ -73,8 +76,32 @@ const {
 
 const routeForUpload = useRoute()
 
+function normalizeEditorContent(input: string | object) {
+  // tiptap expects either a string (HTML) or a plain JSON object representing
+  // document nodes. Vue props can be reactive proxies — passing those into
+  // tiptap causes createNodeFromContent to throw. Convert to a plain clone
+  // and fall back to an empty document if the provided value is invalid.
+  if (typeof input === 'string') return input
+  try {
+    const raw = toRaw(input as any)
+    // If object is empty or has no meaningful keys, return a minimal doc to
+    // avoid tiptap errors.
+    if (!raw || typeof raw !== 'object' || Object.keys(raw).length === 0) {
+      return { type: 'doc', content: [{ type: 'paragraph' }] }
+    }
+
+    return JSON.parse(JSON.stringify(raw))
+  } catch (e) {
+    // Defensive fallback — log helpful info for debugging and return empty doc
+    // to keep the editor alive.
+    // eslint-disable-next-line no-console
+    console.warn('[PostEditor] normalizeEditorContent failed, falling back to empty doc', e)
+    return { type: 'doc', content: [{ type: 'paragraph' }] }
+  }
+}
+
 const editor = useEditor({
-  content: props.content,
+  content: normalizeEditorContent(props.content),
   editable: true,
   extensions: [
     StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, link: { openOnClick: false } }),
@@ -85,15 +112,21 @@ const editor = useEditor({
     }),
     Placeholder.configure({
       placeholder: ({ node }) => {
-        if (node.type.name === 'paragraph') return 'Here is my thoughts about... (/ for commands)'
+        if (node.type.name === 'paragraph') return `${new Date().toLocaleTimeString()} - Here are my thoughts about... (/ for commands)`
         if (node.type.name === 'heading') return 'Heading...'
         return ''
       },
       includeChildren: true,
     }),
     TaskList,
-    TaskItem.configure({ nested: true }),
-    Image,
+    // Use a Vue node view for task items so we can render our AndreasCheckbox component
+    TaskItem.extend({
+      addNodeView() {
+        return VueNodeViewRenderer(TaskItemNodeView)
+      },
+    }).configure({ nested: true }),
+    CustomImage,
+    Separator,
     Table.configure({ resizable: true }),
     TextStyle,
     BackgroundColor,
@@ -149,7 +182,7 @@ async function handleFiles(currentEditor: any, files: File[], pos: number) {
   }
 }
 
-const blockTypes = [
+const blockTypes: BlockType[] = [
   { label: 'Text', icon: 'i-lucide-pilcrow', isActive: () => editor.value?.isActive('paragraph'), action: () => editor.value?.chain().focus().setParagraph().run() },
   { label: 'Heading 1', icon: 'i-lucide-heading-1', isActive: () => !!editor.value?.isActive('heading', { level: 1 }), action: () => editor.value?.chain().focus().toggleHeading({ level: 1 }).run() },
   { label: 'Heading 2', icon: 'i-lucide-heading-2', isActive: () => !!editor.value?.isActive('heading', { level: 2 }), action: () => editor.value?.chain().focus().toggleHeading({ level: 2 }).run() },
@@ -168,9 +201,12 @@ const floatingActions: FloatingAction[] = [
   { label: 'H3', icon: 'i-lucide-heading-3', isActive: () => editor.value?.isActive('heading', { level: 3 }) ?? false, action: () => editor.value?.chain().focus().toggleHeading({ level: 3 }).run() },
   { label: 'Bulleted', icon: 'i-lucide-list', isActive: () => editor.value?.isActive('bulletList') ?? false, action: () => toggleBulletListWithEnter() },
   { label: 'Numbered', icon: 'i-lucide-list-ordered', isActive: () => editor.value?.isActive('orderedList') ?? false, action: () => editor.value?.chain().focus().toggleOrderedList().run() },
+  { label: 'Code Block', icon: 'i-lucide-code-2', isActive: () => editor.value?.isActive('codeBlock') ?? false, action: () => editor.value?.chain().focus().toggleCodeBlock().run() },
   { label: 'To-do', icon: 'i-lucide-check-square', isActive: () => editor.value?.isActive('taskList') ?? false, action: () => editor.value?.chain().focus().toggleTaskList().run() },
   { label: 'Blockquote', icon: 'i-lucide-quote', isActive: () => editor.value?.isActive('blockquote') ?? false, action: () => editor.value?.chain().focus().toggleBlockquote().run() },
   { label: 'Image', icon: 'i-lucide-image', action: () => addImage() },
+  { label: 'Separator', icon: 'i-lucide-minus', action: () => editor.value?.chain().focus().insertContent({ type: 'separator' }).run() },
+  { label: 'Dashed', icon: 'i-lucide-minus', action: () => editor.value?.chain().focus().insertContent({ type: 'separator', attrs: { dashed: true } }).run() },
 ]
 
 function deleteSlashIfPresent() {
@@ -208,7 +244,6 @@ function shouldShowFloatingMenu(props: any) {
   try { return state.doc.textBetween(pos - 1, pos, '', '\n') === '/' } catch { return false }
 }
 
-
 function addImage() {
   // Fallback: prompt for URL if file picker not available
   const url = window.prompt('Image URL')
@@ -221,11 +256,20 @@ function onInsertImages(files: FileList) {
   handleFiles(editor.value, Array.from(files), pos)
 }
 
-// Keep external content sync if parent updates
+// Keep external content sync if parent updates. Normalize incoming content
+// to a plain object so Tiptap isn't handed a Vue Proxy which leads to
+// `Unknown node type: undefined` errors deep in its parsing logic.
 watch(() => props.content, (newContent) => {
   if (!editor.value || !newContent) return
-  if (typeof newContent !== 'string') { editor.value.commands.setContent(newContent); return }
-  if (editor.value.getHTML() !== newContent) editor.value.commands.setContent(newContent)
+  const normalized = normalizeEditorContent(newContent)
+  // If the incoming value was a string, only update when different
+  if (typeof newContent === 'string') {
+    if (editor.value.getHTML() !== newContent) editor.value.commands.setContent(normalized)
+    return
+  }
+
+  // For objects we always set the normalized (cloned) content
+  editor.value.commands.setContent(normalized)
 })
 
 onBeforeUnmount(() => editor.value?.destroy())

@@ -148,13 +148,6 @@
       class="hidden"
       @change="handleFileChange"
     />
-
-    <!-- Save floating button (mobile convenience) -->
-    <div class="fixed bottom-6 right-6 md:hidden">
-      <NButton @click="saveAll" btn="ghost-gray" size="lg" :disabled="saving || !name || !slug">
-        <span class="i-lucide-save mr-2" />Save
-      </NButton>
-    </div>
   </div>
 </template>
 
@@ -168,7 +161,7 @@ const route = useRoute()
 const router = useRouter()
 const identifier = computed(() => route.params.identifier as string)
 
-const session = await useUserSession()
+const { user } = useUserSession()
 const { enhancePost, formatPostDate } = usePost()
 
 const post = ref<Post | null>(null)
@@ -339,16 +332,17 @@ const deleteCoverImage = async () => {
 
 // When the dialog closes, clear any pending checks and reset state.
 watch(isSlugDialogOpen, (open) => {
-  if (!open) {
-    // Cancel any in-flight slug validation and reset state
-    if (slugCheckAbortController) {
-      slugCheckAbortController.abort()
-      slugCheckAbortController = null
-    }
-    slugCheckLoading.value = false
-    slugTaken.value = false
-    slugCheckMessage.value = ''
+  if (open) return
+  
+  // Cancel any in-flight slug validation and reset state
+  if (slugCheckAbortController) {
+    slugCheckAbortController.abort()
+    slugCheckAbortController = null
   }
+  slugCheckLoading.value = false
+  slugTaken.value = false
+  slugCheckMessage.value = ''
+  error.value = ''
 })
 
 const normalizeSlug = (value: string) => {
@@ -491,7 +485,7 @@ const fetchPost = async () => {
     post.value = data
     
     // Check if user can edit
-    if (data.user?.id !== session.user.value?.id) {
+    if (data.user?.id !== user.value?.id) {
       error.value = 'You are not authorized to edit this post'
       router.push('/posts')
       return

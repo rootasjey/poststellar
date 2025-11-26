@@ -9,16 +9,21 @@
   >
     <!-- Image specific actions -->
     <template v-if="imageSelected">
-      <button type="button" @click="downloadSelectedImage" title="Download image">
-        <span class="i-lucide-download" />
-      </button>
-      <button type="button" @click="triggerReplace" title="Replace image">
-        <span class="i-lucide-refresh-ccw" />
-      </button>
-      <button type="button" @click="deleteSelectedImage" title="Delete image" :class="{ 'is-active': false }">
-        <span class="i-lucide-trash" />
-      </button>
-      <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onFilePicked" />
+      <div class="flex items-center gap-2">
+        <button type="button" @click="downloadSelectedImage" title="Download image">
+          <span class="i-lucide-download" />
+        </button>
+        <button type="button" @click="triggerReplace" title="Replace image">
+          <span class="i-lucide-refresh-ccw" />
+        </button>
+        <button type="button" @click="copyImageUrl" title="Copy image">
+          <span :class="copied ? 'i-lucide-clipboard-check text-green-500' : 'i-lucide-clipboard'" />
+        </button>
+        <button type="button" @click="deleteSelectedImage" title="Delete image">
+          <span class="i-lucide-trash" />
+        </button>
+        <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onFilePicked" />
+      </div>
     </template>
     <!-- Formatting actions (default) -->
     <template v-else>
@@ -92,18 +97,24 @@
       </NPopover>
 
       <EditorColorPopover :editor="props.editor" v-model:open="colorVisible" />
+      <div class="divider" />
+      <button type="button" @click="resetEditor" title="Reset editor" class="text-red-500 hover:text-red-600">
+        <span class="i-lucide-eraser" />
+      </button>
     </template>
   </BubbleMenu>
 </template>
 
 <script setup lang="ts">
 import { BubbleMenu } from '@tiptap/vue-3/menus'
-import type { Editor } from '@tiptap/vue-3'
 import { ref, computed, nextTick, watch } from 'vue'
 import EditorColorPopover from './EditorColorPopover.vue'
 import type { FocusOutsideEvent, PointerDownOutsideEvent } from '@una-ui/nuxt'
-import type { EditorState } from '@tiptap/pm/state'
+import type { EditorState, Selection } from '@tiptap/pm/state'
 import { useRoute } from '#imports'
+import type { BetterSelection } from '~~/shared/types/nodes'
+import type { Editor } from '@tiptap/vue-3'
+import type { Editor as TiptapEditor } from '@tiptap/core'
 
 interface BlockType {
   label: string
@@ -154,8 +165,16 @@ const manualLinkOpen = ref(false)
 const linkInput = ref<any | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
-// Image selection detection
-const imageSelected = computed(() => !!props.editor?.isActive('image'))
+// Determine whether the current selection is an image node.
+// Use the editor's selection state directly — relying on `isActive('image')` alone
+// could be misleading in cases where the editor still reports the mark/node active
+// even after the selection has moved. Checking the selection.node ensures we
+// only treat an image as selected when the selection is a NodeSelection for an image.
+const imageSelected = computed(() => {
+  const sel = props.editor?.state.selection as any | undefined
+  return !!sel && !!sel.node && sel.node.type?.name === 'image'
+})
+const copied = ref(false)
 
 // Upload helpers (shared composable state)
 const { addUploading, updateUploading, removeUploading, uploadFileWithProgress } = useEditorImages()
@@ -177,6 +196,7 @@ function setLink() {
   props.editor.chain().focus().insertContentAt(from, placeholder).setTextSelection({ from, to: from + placeholder.length }).extendMarkRange('link').setLink({ href: '' }).run()
   manualLinkOpen.value = true
 }
+
 function updateLink() { if (linkUrl.value === '') props.editor?.chain().focus().extendMarkRange('link').unsetLink().run(); else props.editor?.chain().focus().extendMarkRange('link').setLink({ href: linkUrl.value }).run() }
 function removeLink() { props.editor?.chain().focus().extendMarkRange('link').unsetLink().run() }
 function openLink() { if (linkUrl.value) window.open(linkUrl.value, '_blank') }
@@ -194,9 +214,18 @@ watch(linkVisible, async (showing) => {
 })
 
 // Keep formatting menu open when there's a selection or manual link editing
-function shouldShowMenu(ctx: { state: EditorState; editor: any }) {
+function shouldShowMenu(ctx: { state: EditorState; editor: TiptapEditor }) {
   const { state, editor } = ctx
-  if (imageSelected.value) return true
+
+  // If the current selection is a node and that node is an image, show the image menu.
+  // Use the passed-in state.selection (ctx.state) rather than the outer computed which
+  // references props.editor to avoid timing/staleness issues.
+  const sel = state.selection as BetterSelection
+  const selectionIsImage = !!sel && !!sel.node && sel.node.type?.name === 'image'
+  if (selectionIsImage) return true
+
+  // For formatting menu: only show if there is an actual range selection (not a collapsed cursor),
+  // or when the link editor/color popover is active.
   const { empty } = state.selection
   return !empty || (editor.isActive('link') && manualLinkOpen.value) || colorVisible.value
 }
@@ -250,5 +279,50 @@ async function onFilePicked(e: Event) {
 function deleteSelectedImage() {
   if (!props.editor) return
   props.editor.chain().focus().deleteSelection().run()
+}
+
+async function copyImageUrl() {
+  const src = props.editor?.getAttributes('image')?.src
+  if (!src) return
+
+  const ok = await copyImageToClipboard(src) ; if (!ok) return
+  copied.value = true
+  setTimeout(() => (copied.value = false), 1500)
+}
+
+/**
+ * Reset the selection's content.
+ */
+function resetEditor() {
+  if (!props.editor) return
+  const ed = props.editor ; if (!ed) return
+  const { from, to, empty } = ed.state.selection
+
+  // If selection is not empty: extract plain text, delete selection, insert plain text back (clearing marks/nodes)
+  if (!empty) {
+    const txt = ed.state.doc.textBetween(from, to, '', '\n')
+    try {
+      ed.chain().focus().deleteRange({ from, to }).insertContentAt(from, txt).setParagraph().run()
+    } catch (err) {
+      try { ed.commands.deleteRange({ from, to }); ed.commands.insertContentAt(from, txt) } catch {}
+    }
+    return
+  }
+
+  // If selection is empty: reset the current block (node) that contains the cursor.
+  try {
+    const $from = ed.state.selection.$from
+    const depth = $from.depth
+    const start = $from.start(depth)
+    const end = $from.end(depth)
+    // extract plain text of block
+    const blockText = ed.state.doc.textBetween(start, end, '', '\n')
+    // replace block with a plain paragraph containing the same text but without formatting
+    try {
+      ed.chain().focus().deleteRange({ from: start, to: end }).insertContentAt(start, blockText).setParagraph().run()
+    } catch (err) {
+      try { ed.commands.deleteRange({ from: start, to: end }); ed.commands.insertContentAt(start, blockText) } catch {}
+    }
+  } catch (err) { /* swallow any errors for robustness */ }
 }
 </script>
