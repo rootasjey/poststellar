@@ -1,9 +1,13 @@
 // PUT /api/posts/[slug]/article
+import { blob } from 'hub:blob'
+import { db, schema } from 'hub:db'
+import { eq } from 'drizzle-orm'
 import cleanupOrphanPostImages from '~~/server/utils/postImages'
+import type { ApiPost } from '~~/shared/types/post'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
-  const db = hubDatabase()
+  const database = db
   const body = await readBody(event)
   const identifier = decodeURIComponent(getRouterParam(event, 'identifier') ?? '')
 
@@ -16,7 +20,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const userId = session.user.id
-  const post: ApiPost | null = await getPostByIdentifier(db, identifier)
+  const post: ApiPost | null = await getPostByIdentifier(database, identifier)
 
   if (!post) {
     throw createError({ statusCode: 404, message: 'Post not found' })
@@ -35,31 +39,29 @@ export default defineEventHandler(async (event) => {
       type: 'application/json' 
     })
     
-    await hubBlob().put(post.blob_path as string, articleBlob)
+    await blob.put(post.blob_path as string, articleBlob)
 
     // Run cleanup asynchronously and don't block the article save if it fails
     // Fire-and-forget — log failures but continue execution.
-    cleanupOrphanPostImages(db, post.id, body.article).catch((err) => {
+    cleanupOrphanPostImages(database, post.id, body.article).catch((err) => {
       console.warn('cleanupOrphanPostImages failed for post', post.id, err)
     })
     
-    await db
-    .prepare(`
-      UPDATE posts 
-      SET updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `)
-    .bind(post.id)
-    .run()
+    await database
+      .update(schema.posts)
+      .set({ updated_at: new Date().toISOString() })
+      .where(eq(schema.posts.id, post.id))
+      .run()
 
-    const updatedPost: ApiPost | null = await db
-    .prepare(`SELECT * FROM posts WHERE id = ? LIMIT 1`)
-    .bind(post.id)
-    .first()
+    const updatedPostRow = await database.query.posts.findFirst({
+      where: eq(schema.posts.id, post.id),
+    })
 
-    if (!updatedPost) {
+    if (!updatedPostRow) {
       throw createError({ statusCode: 404, message: 'Updated post not found' })
     }
+
+    const updatedPost = updatedPostRow as ApiPost
 
     return {
       message: 'Post article updated successfully',

@@ -1,10 +1,13 @@
 // POST /api/posts/:id/tags
 // Body: { tagIds: number[] }
+import { db, schema } from 'hub:db'
+import { eq, sql } from 'drizzle-orm'
+import type { ApiPost } from '~~/shared/types/post'
+import { getPostByIdentifier } from '~~/server/utils/post'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const userId = session.user.id
-  const db = hubDatabase()
   const identifier = getRouterParam(event, 'identifier') || ''
 
   if (!identifier) {
@@ -17,7 +20,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'tagIds is required' })
   }
 
-  // Resolve post by numeric id or slug
   const post: ApiPost | null = await getPostByIdentifier(db, identifier)
   if (!post) {
     throw createError({ statusCode: 404, statusMessage: 'Post not found' })
@@ -27,22 +29,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'You are not authorized to modify tags on this post' })
   }
 
-  // Remove all existing tags for this post (use numeric post id)
-  await db.prepare('DELETE FROM post_tags WHERE post_id = ?1').bind(post.id).run()
+  await db.delete(schema.post_tags).where(eq(schema.post_tags.post_id, post.id)).run()
 
-  // Insert new tags
   for (const tagId of body.tagIds) {
-    await db.prepare('INSERT INTO post_tags (post_id, tag_id) VALUES (?1, ?2)').bind(post.id, tagId).run()
+    await db.insert(schema.post_tags).values({ post_id: post.id, tag_id: tagId }).run()
   }
 
-  // Return updated tags
-  const sql = `SELECT t.* FROM tags t
-    INNER JOIN post_tags pt ON pt.tag_id = t.id
-    WHERE pt.post_id = ?1
-    ORDER BY t.name ASC`
+  const tags = await db
+    .select({ tag: schema.tags })
+    .from(schema.tags)
+    .innerJoin(schema.post_tags, eq(schema.post_tags.tag_id, schema.tags.id))
+    .where(eq(schema.post_tags.post_id, post.id))
+    .orderBy(sql`tags.name ASC`)
 
-  const stmt = db.prepare(sql).bind(post.id)
-
-  const tags = await stmt.all()
-  return tags.results
+  return tags.map((row: any) => row.tag)
 })

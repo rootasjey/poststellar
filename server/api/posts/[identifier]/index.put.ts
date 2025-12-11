@@ -1,5 +1,10 @@
 // PUT /api/posts/[identifier]/index.put.ts
+import { db, schema } from 'hub:db'
+import { and, eq, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import type { ApiPost } from '~~/shared/types/post'
+import { convertApiToPost } from '~~/server/utils/post'
+import { upsertPostTags } from '~~/server/utils/tags'
 
 const updatePostSchema = z.object({
   // Allow partial updates — make `name` optional for metadata-only updates
@@ -20,7 +25,7 @@ export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const userId = session.user.id
   const identifier = decodeURIComponent(getRouterParam(event, 'identifier') ?? '')
-  const db = hubDatabase()
+  const database = db
 
   if (!identifier) {
     throw createError({
@@ -30,18 +35,17 @@ export default defineEventHandler(async (event) => {
   }
 
   const validatedBody = await readValidatedBody(event, updatePostSchema.parse)
-  let apiPost = await getPostByIdentifier(db, identifier)
+  let apiPost = await getPostByIdentifier(database, identifier)
 
   handlePostErrors(apiPost, userId)
   apiPost = apiPost as ApiPost
 
   // Check for slug uniqueness if slug is being updated
   if (validatedBody.slug && validatedBody.slug !== apiPost.slug) {
-    const slugExists = await db.prepare(`
-      SELECT id FROM posts WHERE slug = ? AND id != ?
-    `)
-    .bind(validatedBody.slug, apiPost.id)
-    .first()
+    const slugExists = await database.query.posts.findFirst({
+      where: and(eq(schema.posts.slug, validatedBody.slug), ne(schema.posts.id, apiPost.id)),
+      columns: { id: true },
+    })
 
     if (slugExists) {
       throw createError({
@@ -53,55 +57,35 @@ export default defineEventHandler(async (event) => {
 
   // Prepare update data
   const updateData: Record<string, any> = {}
-  const updateFields: string[] = []
-  const updateValues: any[] = []
 
   // Handle each field that might be updated
   if (validatedBody.name !== undefined) {
-    updateFields.push('name = ?')
-    updateValues.push(validatedBody.name)
     updateData.name = validatedBody.name
   }
 
   if (validatedBody.description !== undefined) {
-    updateFields.push('description = ?')
-    updateValues.push(validatedBody.description)
     updateData.description = validatedBody.description
   }
 
   if (validatedBody.language !== undefined) {
-    updateFields.push('language = ?')
-    updateValues.push(validatedBody.language)
     updateData.language = validatedBody.language
   }
 
   if (validatedBody.slug !== undefined) {
-    updateFields.push('slug = ?')
-    updateValues.push(validatedBody.slug)
     updateData.slug = validatedBody.slug
   }
 
   if (validatedBody.status !== undefined) {
-    updateFields.push('status = ?')
-    updateValues.push(validatedBody.status)
     updateData.status = validatedBody.status
 
-    // Set published_at when changing to published
     if (validatedBody.status === 'published' && apiPost.status !== 'published') {
-      updateFields.push('published_at = ?')
-      updateValues.push(new Date().toISOString())
       updateData.published_at = new Date().toISOString()
-    }
-    // Clear published_at when changing from published
-    else if (validatedBody.status !== 'published' && apiPost.status === 'published') {
-      updateFields.push('published_at = ?')
-      updateValues.push(null)
+    } else if (validatedBody.status !== 'published' && apiPost.status === 'published') {
       updateData.published_at = null
     }
   }
 
-  // Only proceed if there are fields to update
-  if (updateFields.length === 0) {
+  if (!Object.keys(updateData).length) {
     return {
       success: true,
       message: 'No changes to update',
@@ -109,56 +93,44 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-   // Add updated_at timestamp
-  updateFields.push('updated_at = ?')
-  updateValues.push(new Date().toISOString())
+  updateData.updated_at = new Date().toISOString()
 
-  // Add WHERE clause values
-  updateValues.push(apiPost.id, userId)
+  const updateResult = await database.update(schema.posts)
+    .set(updateData)
+    .where(and(eq(schema.posts.id, apiPost.id), eq(schema.posts.user_id, userId)))
+    .run()
 
-  // Execute update
-  const updateQuery = `
-    UPDATE posts 
-    SET ${updateFields.join(', ')} 
-    WHERE id = ? AND user_id = ?
-  `
-
-  const updateResult = await db
-  .prepare(updateQuery)
-  .bind(...updateValues)
-  .run()
-
-  if (!updateResult.success) {
+  const updatedRows = Number((updateResult as any)?.rowsAffected ?? (updateResult as any)?.meta?.changes ?? (updateResult as any)?.meta?.rows_written ?? 0)
+  if (!updatedRows) {
     throw createError({
       statusCode: 500,
-      statusMessage: updateResult.error,
+      statusMessage: 'Failed to update post',
     })
   }
 
   // --- TAGS: Process tags after post update ---
   if (validatedBody.tags !== undefined) {
-    await upsertPostTags(db, apiPost.id, validatedBody.tags)
+    await upsertPostTags(database, apiPost.id, validatedBody.tags)
   }
 
   // Fetch ALL tags for the post (not just created ones)
-  const tagsResult = await db.prepare(`
-    SELECT t.* FROM tags t
-    JOIN post_tags pt ON pt.tag_id = t.id
-    WHERE pt.post_id = ?
-    ORDER BY pt.rowid ASC
-  `).bind(apiPost.id).all()
+  const tagRows = await database
+    .select({ tag: schema.tags })
+    .from(schema.tags)
+    .innerJoin(schema.post_tags, eq(schema.post_tags.tag_id, schema.tags.id))
+    .where(eq(schema.post_tags.post_id, apiPost.id))
+    .orderBy(sql`post_tags.rowid ASC`)
 
-  const updatedPost: ApiPost | null = await db
-  .prepare(`SELECT * FROM posts WHERE id = ? LIMIT 1`)
-  .bind(apiPost.id)
-  .first()
+  const updatedPost = await database.query.posts.findFirst({
+    where: eq(schema.posts.id, apiPost.id),
+  })
 
   if (!updatedPost) {
     throw createError({ statusCode: 500, message: 'Failed to update post' })
   }
 
-  const post = convertApiToPost(updatedPost, {
-    tags: tagsResult.results,
+  const post = convertApiToPost(updatedPost as ApiPost, {
+    tags: tagRows.map((row: any) => row.tag),
     userName: session.user.name,
   })
 

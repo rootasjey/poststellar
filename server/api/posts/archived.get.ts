@@ -1,41 +1,40 @@
 // GET /api/posts/archived
+import { db, schema } from 'hub:db'
+import { and, desc, eq, sql } from 'drizzle-orm'
+import type { ApiPost, Post } from '~~/shared/types/post'
+import { convertApiToPost } from '~~/server/utils/post'
+
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const query = getQuery(event)
   const search = query.search as string
-  const db = hubDatabase()
   const userId = session.user.id
 
-  let sql = `
-    SELECT * FROM posts
-    WHERE user_id = ? AND status = 'archived'
-  `
-  const params: any[] = [userId]
-
+  const conditions = [eq(schema.posts.user_id, userId), eq(schema.posts.status, 'archived')]
   if (search && search.trim()) {
-    sql += ` AND (name LIKE ? OR description LIKE ?)`
     const searchPattern = `%${search.trim()}%`
-    params.push(searchPattern, searchPattern)
+    conditions.push(sql`(posts.name LIKE ${searchPattern} OR COALESCE(posts.description, '') LIKE ${searchPattern})`)
   }
 
-  sql += ` ORDER BY created_at DESC LIMIT 25`
+  const resultRows = await db
+    .select({ post: schema.posts })
+    .from(schema.posts)
+    .where(and(...conditions))
+    .orderBy(desc(schema.posts.created_at))
+    .limit(25)
 
-  const rows = await db
-    .prepare(sql)
-    .bind(...params)
-    .all()
-  
   const archivedPosts: Post[] = []
-  for (const apiPost of rows.results as ApiPost[]) {
-    const tagsResult = await db.prepare(`
-      SELECT t.* FROM tags t
-      JOIN post_tags pt ON pt.tag_id = t.id
-      WHERE pt.post_id = ?
-      ORDER BY pt.rowid ASC
-    `).bind(apiPost.id).all()
+  for (const { post: apiPost } of resultRows as Array<{ post: ApiPost }>) {
+    const tagRows = await db
+      .select({ tag: schema.tags })
+      .from(schema.tags)
+      .innerJoin(schema.post_tags, eq(schema.post_tags.tag_id, schema.tags.id))
+      .where(eq(schema.post_tags.post_id, apiPost.id))
+      .orderBy(sql`post_tags.rowid ASC`)
 
+    const tags = tagRows.map((row: any) => row.tag)
     const archivedPost = convertApiToPost(apiPost, {
-      tags: tagsResult.results,
+      tags,
       userName: session.user.name,
     })
 

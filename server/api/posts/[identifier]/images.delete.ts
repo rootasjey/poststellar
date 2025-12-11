@@ -1,15 +1,19 @@
 // DELETE /api/posts/[identifier]/images
 // Accepts query ?id=<imageRowId> or ?filename=<filename> to remove a single inline image
+import { blob } from 'hub:blob'
+import { db, schema } from 'hub:db'
+import { and, eq } from 'drizzle-orm'
+import type { ApiPost } from '~~/shared/types/post'
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const userId = session.user.id
-  const db = hubDatabase()
-  const hb = hubBlob()
+  const database = db
+  const hb = blob
 
   const identifier = decodeURIComponent(getRouterParam(event, 'identifier') ?? '')
   if (!identifier) throw createError({ statusCode: 400, message: 'Post identifier is required' })
 
-  const post: ApiPost | null = await getPostByIdentifier(db, identifier)
+  const post: ApiPost | null = await getPostByIdentifier(database, identifier)
   if (!post) throw createError({ statusCode: 404, message: 'Post not found' })
   if (post.user_id !== userId) throw createError({ statusCode: 403, message: 'You are not authorized to delete this post image' })
 
@@ -25,9 +29,11 @@ export default defineEventHandler(async (event) => {
     let record: any = null
 
     if (id) {
-      record = await db.prepare(`SELECT * FROM post_images WHERE id = ? LIMIT 1`).bind(id).first()
+      record = await database.query.post_images.findFirst({ where: eq(schema.post_images.id, id) })
     } else if (filename) {
-      record = await db.prepare(`SELECT * FROM post_images WHERE filename = ? AND post_id = ? LIMIT 1`).bind(filename, post.id).first()
+      record = await database.query.post_images.findFirst({
+        where: and(eq(schema.post_images.filename, filename), eq(schema.post_images.post_id, post.id)),
+      })
     }
 
     if (!record) {
@@ -42,13 +48,13 @@ export default defineEventHandler(async (event) => {
     // Delete blob
     try {
       const pathname = record.pathname.replace(/^\/+/, '')
-      await hb.delete(pathname)
+      await hb.del(pathname)
     } catch (err) {
       console.warn('Failed to delete blob for inline image', err)
     }
 
     // Delete DB record
-    await db.prepare(`DELETE FROM post_images WHERE id = ?`).bind(record.id).run()
+    await database.delete(schema.post_images).where(eq(schema.post_images.id, record.id)).run()
 
     return { success: true }
   } catch (err: any) {

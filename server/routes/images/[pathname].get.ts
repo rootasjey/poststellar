@@ -1,3 +1,4 @@
+import { blob } from 'hub:blob'
 import { z } from 'zod'
 
 export default eventHandler(async (event) => {
@@ -6,11 +7,11 @@ export default eventHandler(async (event) => {
   }).parse)
 
   let imagePathname = pathname
-  const query = getQuery(event) // Get query parameters for transformations
+  const query = getQuery(event)
 
-  if (typeof query.relatedTo === "string") {
+  if (typeof query.relatedTo === 'string') {
     imagePathname = `${query.relatedTo}/${query.slug}/${imagePathname}`
   }
 
-  return hubBlob().serve(event, imagePathname)
+  return blob.serve(event, imagePathname)
 })

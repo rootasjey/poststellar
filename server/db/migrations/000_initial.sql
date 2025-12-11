@@ -1,4 +1,4 @@
--- Create the users table
+-- Initial schema migrated from server/database/migrations/schema.sql
 CREATE TABLE IF NOT EXISTS users (
   avatar TEXT DEFAULT "",
   biography TEXT DEFAULT "",
@@ -17,11 +17,9 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create index for email lookups
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_name ON users (name);
 
--- Trigger to update the updated_at timestamp whenever a row is modified
 CREATE TRIGGER IF NOT EXISTS update_users_timestamp
 AFTER UPDATE ON users
 FOR EACH ROW
@@ -29,7 +27,6 @@ BEGIN
   UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
 END;
 
--- Create the posts table
 CREATE TABLE IF NOT EXISTS posts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   blob_path TEXT,
@@ -49,14 +46,11 @@ CREATE TABLE IF NOT EXISTS posts (
   status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   user_id INTEGER NOT NULL,
-  
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Create unique index for posts table
 CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_unique_slug ON posts (slug);
 
--- Trigger to update the updated_at timestamp whenever a post is modified
 CREATE TRIGGER IF NOT EXISTS update_posts_timestamp
 AFTER UPDATE ON posts
 FOR EACH ROW
@@ -64,7 +58,6 @@ BEGIN
   UPDATE posts SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
 END;
 
--- Create the tags table
 CREATE TABLE IF NOT EXISTS tags (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE COLLATE NOCASE,
@@ -73,7 +66,6 @@ CREATE TABLE IF NOT EXISTS tags (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Trigger to update the updated_at timestamp whenever a tag is modified
 CREATE TRIGGER IF NOT EXISTS update_tags_timestamp
 AFTER UPDATE ON tags
 FOR EACH ROW
@@ -81,7 +73,6 @@ BEGIN
   UPDATE tags SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
 END;
 
--- Create the post_tags table (many-to-many)
 CREATE TABLE IF NOT EXISTS post_tags (
   post_id INTEGER NOT NULL,
   tag_id INTEGER NOT NULL,
@@ -90,7 +81,6 @@ CREATE TABLE IF NOT EXISTS post_tags (
   FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
 );
 
--- Create the messages table
 CREATE TABLE IF NOT EXISTS messages (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,13 +94,9 @@ CREATE TABLE IF NOT EXISTS messages (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create index for faster filtering by read status
 CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(read);
-
--- Create composite index for common queries (read status + created_at for sorting)
 CREATE INDEX IF NOT EXISTS idx_messages_read_created_at ON messages(read, created_at DESC);
 
--- Trigger to update the updated_at timestamp whenever a message is modified
 CREATE TRIGGER IF NOT EXISTS update_messages_timestamp
 AFTER UPDATE ON messages
 FOR EACH ROW

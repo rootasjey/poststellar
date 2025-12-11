@@ -1,4 +1,6 @@
 // GET /api/posts
+import { db, schema } from 'hub:db'
+import { and, desc, eq, like, or, sql } from 'drizzle-orm'
 import { Post, ApiPost } from '~~/shared/types/post'
 import { convertApiToPost } from '~~/server/utils/post'
 
@@ -16,56 +18,52 @@ export default defineEventHandler(async (event) => {
   // Hard cap to avoid abuse
   if (limit > 50) limit = 50
   const offset = (page - 1) * limit
-  const db = hubDatabase()
-
-  let sql = `
-    SELECT DISTINCT posts.* FROM posts
-  `
-  const params: any[] = []
-
-  // If filtering by tag, join with tags tables
-  if (tag && tag.trim()) {
-    sql += `
-      JOIN post_tags pt ON pt.post_id = posts.id
-      JOIN tags t ON t.id = pt.tag_id
-    `
-  }
-
-  sql += ` WHERE posts.status = 'published'`
+  const conditions = [eq(schema.posts.status, 'published')]
 
   if (search && search.trim()) {
-    sql += ` AND (posts.name LIKE ? OR posts.description LIKE ?)`
-    const searchPattern = `%${search.trim()}%`
-    params.push(searchPattern, searchPattern)
+    const pattern = `%${search.trim()}%`
+    const nameLike = like(schema.posts.name, pattern)
+    const descriptionLike = like(schema.posts.description, pattern)
+    const searchCondition = descriptionLike ? or(nameLike, descriptionLike) : nameLike
+    conditions.push(searchCondition as unknown as ReturnType<typeof sql>)
   }
 
-  if (tag && tag.trim()) {
-    sql += ` AND LOWER(t.name) = LOWER(?)`
-    params.push(tag.trim())
-  }
+  const hasTagFilter = Boolean(tag && tag.trim())
+  const baseQuery = db
+    .select({ post: schema.posts })
+    .from(schema.posts)
 
-  sql += ` ORDER BY posts.created_at DESC LIMIT ${limit} OFFSET ${offset}`
+  const withJoins = hasTagFilter
+    ? baseQuery
+        .innerJoin(schema.post_tags, eq(schema.post_tags.post_id, schema.posts.id))
+        .innerJoin(schema.tags, eq(schema.tags.id, schema.post_tags.tag_id))
+    : baseQuery
 
-  const postQuery = await db
-    .prepare(sql)
-    .bind(...params)
-    .all()
-  
+  const where = hasTagFilter
+    ? and(...conditions, sql`LOWER(${schema.tags.name}) = LOWER(${tag!.trim()})`)
+    : and(...conditions)
+
+  const results = await withJoins
+    .where(where)
+    .orderBy(desc(schema.posts.created_at))
+    .limit(limit)
+    .offset(offset)
+
+  const rows = results.map((row: any) => row.post as ApiPost)
   const posts: Post[] = []
-  for (const apiPost of postQuery.results as ApiPost[]) {
-    const tagQuery = await db.prepare(`
-      SELECT t.* FROM tags t
-      JOIN post_tags pt ON pt.tag_id = t.id
-      WHERE pt.post_id = ?
-      ORDER BY pt.rowid ASC
-    `).bind(apiPost.id).all()
-    
-    const post = convertApiToPost(apiPost, {
-      tags: tagQuery.results,
-    })
 
+  for (const apiPost of rows) {
+    const tagRows = await db
+      .select({ tag: schema.tags })
+      .from(schema.tags)
+      .innerJoin(schema.post_tags, eq(schema.post_tags.tag_id, schema.tags.id))
+      .where(eq(schema.post_tags.post_id, apiPost.id))
+      .orderBy(sql`post_tags.rowid ASC`)
+
+    const tags = tagRows.map((row: any) => row.tag)
+    const post = convertApiToPost(apiPost, { tags })
     posts.push(post)
   }
-  
+
   return posts
 })

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import { ApiPost, Post } from "~~/shared/types/post"
 
 /**
@@ -56,15 +57,20 @@ export const createArticle = () => {
  */
 export async function getPostByIdentifier(db: any, identifier: string | number) {
   const isNumericId = typeof identifier === "number" || /^\d+$/.test(String(identifier))
-  const query = `
+  const condition = isNumericId
+    ? sql`p.id = ${Number(identifier)}`
+    : sql`p.slug = ${identifier}`
+
+  const result = await db.execute(sql`
     SELECT p.*, u.avatar as user_avatar, u.name as user_name
     FROM posts p
     JOIN users u ON p.user_id = u.id
-    WHERE ${isNumericId ? "p.id = ?" : "p.slug = ?"}
+    WHERE ${condition}
     LIMIT 1
-  `
-  const value = isNumericId ? Number(identifier) : identifier
-  return await db.prepare(query).bind(value).first() as ApiPost | null
+  `)
+
+  const rows = (result as any)?.rows ?? (result as any)?.results
+  return (rows?.[0] as ApiPost | undefined) ?? null
 }
 
 /**

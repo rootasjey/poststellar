@@ -1,3 +1,7 @@
+import { blob } from 'hub:blob'
+import { db, schema } from 'hub:db'
+import { and, eq, or } from 'drizzle-orm'
+type Database = typeof db
 /**
  * Walk a tiptap-like node tree and collect referenced image filenames and stored paths
  */
@@ -59,33 +63,49 @@ const collectImageSrcs = (node: any, setFiles: Set<string>, setPaths: Set<string
  * Cleanup orphan images stored under posts/<id>/images.
  *
  * - Marks `in_use` flags in `post_images` table
- * - Deletes blobs from hubBlob that are no longer referenced by the given article body
+ * - Deletes blobs from storage that are no longer referenced by the given article body
  * - Removes DB rows for deleted blobs
  *
- * @param db - Database instance (hubDatabase())
+ * @param database - Database instance (hub:db)
  * @param postId - numeric post id
  * @param articleJSON - the article JSON body to inspect for references
- * @param hb - optional hubBlob instance (if you prefer to pass one)
  */
-export async function cleanupOrphanPostImages(db: any, postId: number | string, articleJSON: any) {
+export async function cleanupOrphanPostImages(database: Database, postId: number | string, articleJSON: any) {
   const referencedFiles = new Set<string>()
   const referencedPaths = new Set<string>()
   collectImageSrcs(articleJSON, referencedFiles, referencedPaths)
 
+  const postIdNumber = Number(postId)
+  if (!Number.isFinite(postIdNumber)) {
+    return { deleted: 0, preserved: 0 }
+  }
+
   try {
-    await db.prepare(`UPDATE post_images SET in_use = 0 WHERE post_id = ?`).bind(postId).run()
+    await database
+      .update(schema.post_images)
+      .set({ in_use: false })
+      .where(eq(schema.post_images.post_id, postIdNumber))
+      .run()
   } catch (err) {
     // non-fatal — keep going
   }
 
-  const blobClient = hubBlob()
   const prefix = `posts/${postId}/images`
   const results = { deleted: 0, preserved: 0 }
 
   // Helpers: small, testable units so the main loop stays readable
   const markImageInUse = async (pathname: string, filename: string) => {
     try {
-      await db.prepare(`UPDATE post_images SET in_use = 1 WHERE (pathname = ? OR filename = ?) AND post_id = ?`).bind(`/${pathname}`, filename, postId).run()
+      await database
+        .update(schema.post_images)
+        .set({ in_use: true })
+        .where(
+          and(
+            eq(schema.post_images.post_id, postIdNumber),
+            or(eq(schema.post_images.pathname, `/${pathname}`), eq(schema.post_images.filename, filename))
+          )
+        )
+        .run()
     } catch (err) {
       // non-fatal — keep going
     }
@@ -94,12 +114,20 @@ export async function cleanupOrphanPostImages(db: any, postId: number | string, 
   const deleteBlobAndRecord = async (pathname: string, filename: string) => {
     try {
       console.log('Deleting orphan image blob:', `/${pathname}`)
-      await blobClient.delete(pathname)
+      await blob.del(pathname)
       // await blobClient.delete(`/${pathname}`)
       results.deleted += 1
       // Also cleanup DB record if present
       try {
-        await db.prepare(`DELETE FROM post_images WHERE (pathname = ? OR filename = ?) AND post_id = ?`).bind(`/${pathname}`, filename, postId).run()
+        await database
+          .delete(schema.post_images)
+          .where(
+            and(
+              eq(schema.post_images.post_id, postIdNumber),
+              or(eq(schema.post_images.pathname, `/${pathname}`), eq(schema.post_images.filename, filename))
+            )
+          )
+          .run()
       } catch (err) {
         // non-fatal — we deleted the blob, but DB cleanup failed
         console.warn('postImages: failed to delete DB record for', pathname, err)
@@ -110,7 +138,7 @@ export async function cleanupOrphanPostImages(db: any, postId: number | string, 
   }
 
   try {
-    const list = await blobClient.list({ prefix })
+    const list = await blob.list({ prefix })
     for (const blobItem of list.blobs) {
       const pathname = blobItem.pathname.replace(/^\/+/, '')
       const filename = pathname.split('/').pop() || ''
@@ -123,12 +151,6 @@ export async function cleanupOrphanPostImages(db: any, postId: number | string, 
       }
 
       await deleteBlobAndRecord(pathname, filename)
-    }
-
-    try {
-      await db.prepare(`UPDATE post_images SET in_use = 0 WHERE post_id = ? AND (in_use IS NULL OR in_use = 0)`).bind(postId).run()
-    } catch (err) {
-      // ignore
     }
   } catch (err) {
     console.warn('Failed to list post images for cleanup', err)

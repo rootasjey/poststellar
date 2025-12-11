@@ -1,4 +1,8 @@
 // GET /api/posts/:id/tags
+import { db, schema } from 'hub:db'
+import { eq, sql } from 'drizzle-orm'
+import type { ApiPost } from '~~/shared/types/post'
+import { getPostByIdentifier } from '~~/server/utils/post'
 
 export default defineEventHandler(async (event) => {
   const identifier = getRouterParam(event, 'identifier') || ''
@@ -7,9 +11,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Post identifier (id or slug) is required' })
   }
 
-  const db = hubDatabase()
-
-  // If a slug was provided find the numeric post id
   let postId: number | string = identifier
   if (!/^\d+$/.test(String(identifier))) {
     const apiPost: ApiPost | null = await getPostByIdentifier(db, identifier)
@@ -17,12 +18,12 @@ export default defineEventHandler(async (event) => {
     postId = apiPost.id
   }
 
-  const sql = `SELECT t.* FROM tags t
-    INNER JOIN post_tags pt ON pt.tag_id = t.id
-    WHERE pt.post_id = ?1
-    ORDER BY t.name ASC`
+  const tags = await db
+    .select({ tag: schema.tags })
+    .from(schema.tags)
+    .innerJoin(schema.post_tags, eq(schema.post_tags.tag_id, schema.tags.id))
+    .where(eq(schema.post_tags.post_id, Number(postId)))
+    .orderBy(sql`tags.name ASC`)
 
-  const stmt = db.prepare(sql).bind(postId)
-  const tags = await stmt.all()
-  return tags.results
+  return tags.map((row: any) => row.tag)
 })

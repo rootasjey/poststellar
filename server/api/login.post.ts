@@ -1,3 +1,5 @@
+import { db, schema } from 'hub:db'
+import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 const bodySchema = z.object({
@@ -8,10 +10,9 @@ const bodySchema = z.object({
 export default defineEventHandler(async (event) => {
   const { email, password } = await readValidatedBody(event, bodySchema.parse)
 
-  const userData = await hubDatabase()
-    .prepare('SELECT * FROM users WHERE email = ?1 LIMIT 1')
-    .bind(email)
-    .first()
+  const userData = await db.query.users.findFirst({
+    where: eq(schema.users.email, email),
+  })
 
   if (!userData) {
     throw createError({
@@ -29,14 +30,21 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const user = {
-    createdAt: userData.created_at,
+  const sessionUser = {
+    avatar: userData.avatar ?? '',
+    biography: userData.biography ?? '',
+    created_at: userData.created_at,
     email: userData.email,
     id: userData.id,
+    job: userData.job ?? '',
+    language: userData.language ?? 'en',
+    location: userData.location ?? '',
     name: userData.name,
     role: userData.role,
+    socials: userData.socials ?? '[]',
+    updated_at: userData.updated_at,
   }
 
-  await setUserSession(event, { user })
-  return { user }
+  await setUserSession(event, { user: sessionUser })
+  return { user: sessionUser }
 })

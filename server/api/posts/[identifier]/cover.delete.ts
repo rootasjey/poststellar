@@ -1,12 +1,16 @@
 // DELETE /api/posts/[slug]/cover
+import { blob } from 'hub:blob'
+import { db, schema } from 'hub:db'
+import { eq } from 'drizzle-orm'
+import type { ApiPost } from '~~/shared/types/post'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const userId = session.user.id
-  const db = hubDatabase()
+  const database = db
   const identifier = decodeURIComponent(getRouterParam(event, 'identifier') ?? '')
 
-  let post: ApiPost | null = await getPostByIdentifier(db, identifier)
+  let post: ApiPost | null = await getPostByIdentifier(database, identifier)
 
   handleErrors({ post, userId })
   post = post as ApiPost
@@ -19,20 +23,17 @@ export default defineEventHandler(async (event) => {
       .replace(/^\/+/, '')           // remove leading '/'
       .replace(/\/[^\/]+$/, '')     // remove trailing filename
     const prefix = folderPrefix
-    const blobList = await hubBlob().list({ prefix })
+    const blobList = await blob.list({ prefix })
     
     for (const blobItem of blobList.blobs) {
-      await hubBlob().delete(blobItem.pathname)
+      await blob.del(blobItem.pathname)
     }
 
-    await db
-    .prepare(`
-      UPDATE posts 
-      SET image_src = '', image_alt = '', image_ext = '', updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `)
-    .bind(post.id)
-    .run()
+    await database
+      .update(schema.posts)
+      .set({ image_src: '', image_alt: '', image_ext: '', updated_at: new Date().toISOString() })
+      .where(eq(schema.posts.id, post.id))
+      .run()
 
     return { 
       success: true,

@@ -29,9 +29,8 @@ export default defineNuxtConfig({
   hub: {
     blob: true,
     cache: true,
-    database: true,
+    db: 'sqlite',
     kv: true,
-    browser: true,
   },
 
   image: {

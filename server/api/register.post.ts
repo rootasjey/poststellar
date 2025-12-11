@@ -1,3 +1,5 @@
+import { db, schema } from 'hub:db'
+import { eq, or } from 'drizzle-orm'
 import { z } from 'zod'
 
 const bodySchema = z.object({
@@ -17,10 +19,9 @@ export default defineEventHandler(async (event) => {
 
   try {
     // Check if user already exists
-    const existingUser = await hubDatabase()
-      .prepare('SELECT id FROM users WHERE email = ?1 OR name = ?2 LIMIT 1')
-      .bind(email, name)
-      .first()
+    const existingUser = await db.query.users.findFirst({
+      where: or(eq(schema.users.email, email), eq(schema.users.name, name)),
+    })
 
     if (existingUser) {
       throw createError({
@@ -33,15 +34,25 @@ export default defineEventHandler(async (event) => {
     const hashedPassword = await hashPassword(password)
 
     // Insert new user
-    const result = await hubDatabase()
-      .prepare(`
-        INSERT INTO users (name, email, password, biography, job, language, location, socials, role)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'user')
-      `)
-      .bind(name, email, hashedPassword, biography || null, job || null, language || null, location || null, socials || null)
-      .run()
+    const insertUser: typeof schema.users.$inferInsert = {
+      name,
+      email,
+      password: hashedPassword,
+      biography: biography || '',
+      job: job || '',
+      language: language || 'en',
+      location: location || '',
+      socials: socials || '[]',
+      role: 'user',
+      avatar: '',
+      email_verified: false,
+    }
 
-    if (!result.success) {
+    const result = await db.insert(schema.users).values(insertUser).run()
+
+    const insertedId = Number((result as any)?.lastInsertRowid ?? (result as any)?.meta?.last_row_id ?? 0)
+
+    if (!insertedId) {
       throw createError({
         statusCode: 500,
         message: 'Failed to create user account'
@@ -49,10 +60,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Fetch the created user
-    const newUser = await hubDatabase()
-      .prepare('SELECT * FROM users WHERE id = ?1 LIMIT 1')
-      .bind(result.meta.last_row_id)
-      .first()
+    const newUser = await db.query.users.findFirst({ where: eq(schema.users.id, insertedId) })
 
     if (!newUser) {
       throw createError({
@@ -62,25 +70,26 @@ export default defineEventHandler(async (event) => {
     }
 
     // Set user session
-    await setUserSession(event, {
-      user: {
-        createdAt: newUser.created_at,
-        email: newUser.email,
-        id: newUser.id,
-        name: newUser.name,
-        role: newUser.role,
-      }
-    })
+    const sessionUser = {
+      avatar: newUser.avatar ?? '',
+      biography: newUser.biography ?? '',
+      created_at: newUser.created_at,
+      email: newUser.email,
+      id: newUser.id,
+      job: newUser.job ?? '',
+      language: newUser.language ?? 'en',
+      location: newUser.location ?? '',
+      name: newUser.name,
+      role: newUser.role,
+      socials: newUser.socials ?? '[]',
+      updated_at: newUser.updated_at,
+    }
+
+    await setUserSession(event, { user: sessionUser })
 
     return {
       message: 'Account created successfully',
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        createdAt: newUser.created_at
-      }
+      user: sessionUser
     }
 
   } catch (error: any) {

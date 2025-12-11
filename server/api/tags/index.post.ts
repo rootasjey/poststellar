@@ -1,4 +1,6 @@
 // POST /api/tags
+import { db, schema } from 'hub:db'
+import { and, eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -10,15 +12,26 @@ export default defineEventHandler(async (event) => {
   const category = body.category?.trim() || 'general'
 
   try {
-    const stmt = hubDatabase().prepare('INSERT INTO tags (name, category) VALUES (?1, ?2)').bind(name, category)
-    const result = await stmt.run()
-    if (!result.success) {
-      throw createError({ statusCode: 500, statusMessage: 'Failed to create tag' })
+    const exists = await db.query.tags.findFirst({
+      where: and(eq(schema.tags.name, name), eq(schema.tags.category, category)),
+    })
+
+    if (exists) {
+      throw createError({ statusCode: 409, statusMessage: 'Tag already exists' })
     }
-    // Fetch the created tag (by name and category, since id is not returned)
-    const tag = await hubDatabase().prepare('SELECT * FROM tags WHERE name = ?1 AND category = ?2').bind(name, category).first()
+
+    const result = await db.insert(schema.tags).values({ name, category }).run()
+    const insertedId = Number((result as any)?.lastInsertRowid ?? (result as any)?.meta?.last_row_id ?? 0)
+
+    const tag = insertedId
+      ? await db.query.tags.findFirst({ where: eq(schema.tags.id, insertedId) })
+      : await db.query.tags.findFirst({ where: and(eq(schema.tags.name, name), eq(schema.tags.category, category)) })
+
     return tag
   } catch (e: any) {
+    if (e.statusCode) {
+      throw e
+    }
     if (e.message && e.message.includes('UNIQUE')) {
       throw createError({ statusCode: 409, statusMessage: 'Tag already exists' })
     }

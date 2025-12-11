@@ -1,4 +1,6 @@
 // GET /api/posts/slug/check?slug=some-slug&excludeId=123 (excludeId optional)
+import { db, schema } from 'hub:db'
+import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 const querySchema = z.object({
@@ -7,7 +9,6 @@ const querySchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const db = hubDatabase()
   const query = getQuery(event)
   const validated = querySchema.safeParse(query)
 
@@ -18,10 +19,10 @@ export default defineEventHandler(async (event) => {
   const { slug, excludeId } = validated.data
 
   // Check if slug exists in posts table for a different post id
-  const row: { id?: number } | null = await db
-    .prepare('SELECT id FROM posts WHERE slug = ? LIMIT 1')
-    .bind(slug)
-    .first()
+  const row = await db.query.posts.findFirst({
+    where: eq(schema.posts.slug, slug),
+    columns: { id: true },
+  })
 
   const exists = !!row && (excludeId ? row.id !== excludeId : true)
 

@@ -1,5 +1,7 @@
 // server/utils/tags.ts
 // Utility to upsert tags and update post_tags join table
+import { schema } from 'hub:db'
+import { eq } from 'drizzle-orm'
 import type { ApiTag } from '~~/shared/types/tags'
 
 /**
@@ -17,38 +19,42 @@ export async function upsertPostTags(
   const createdTags: Array<ApiTag> = []
 
   for (const tag of tags) {
-    // Try to find tag by name
-    let dbTag = await db.prepare('SELECT * FROM tags WHERE name = ? LIMIT 1').bind(tag.name).first()
-    let isNew = false
+    const existing = await db.query.tags.findFirst({
+      where: eq(schema.tags.name, tag.name),
+    })
 
-    if (!dbTag) {
-      // Insert new tag
-      await db.prepare('INSERT INTO tags (name, category, created_at, updated_at) VALUES (?, ?, ?, ?)')
-        .bind(tag.name, tag.category || '', new Date().toISOString(), new Date().toISOString())
-        .run()
-      dbTag = await db.prepare('SELECT * FROM tags WHERE name = ? LIMIT 1').bind(tag.name).first()
-      isNew = true
+    if (existing) {
+      tagIds.push(existing.id as number)
+      continue
     }
 
-    if (dbTag && typeof dbTag.id === 'number') {
-      tagIds.push(dbTag.id)
-      if (isNew) {
-        createdTags.push({ 
-          id: dbTag.id,
-          name: dbTag.name,
-          category: dbTag.category,
-          created_at: dbTag.created_at,
-          updated_at: dbTag.updated_at
-        })
-      }
+    const inserted = await db.insert(schema.tags).values({
+      name: tag.name,
+      category: tag.category || '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).run()
+
+    const insertedId = Number((inserted as any)?.lastInsertRowid ?? (inserted as any)?.meta?.last_row_id ?? 0)
+    const fetched = insertedId
+      ? await db.query.tags.findFirst({ where: eq(schema.tags.id, insertedId) })
+      : await db.query.tags.findFirst({ where: eq(schema.tags.name, tag.name) })
+
+    if (fetched?.id) {
+      tagIds.push(fetched.id as number)
+      createdTags.push({
+        id: fetched.id as number,
+        name: fetched.name,
+        category: fetched.category,
+        created_at: fetched.created_at,
+        updated_at: fetched.updated_at,
+      })
     }
   }
 
-  // Remove all previous post_tags
-  await db.prepare('DELETE FROM post_tags WHERE post_id = ?').bind(postId).run()
-  // Insert new post_tags
+  await db.delete(schema.post_tags).where(eq(schema.post_tags.post_id, postId)).run()
   for (const tagId of tagIds) {
-    await db.prepare('INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)').bind(postId, tagId).run()
+    await db.insert(schema.post_tags).values({ post_id: postId, tag_id: tagId }).run()
   }
 
   return createdTags

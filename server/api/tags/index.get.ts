@@ -1,22 +1,22 @@
 // GET /api/tags
+import { db, schema } from 'hub:db'
+import { and, eq, like } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
-  let sql = 'SELECT * FROM tags'
-  const params: any[] = []
+  const whereClauses = [] as any[]
 
   if (query.category) {
-    sql += ' WHERE category = ?1'
-    params.push(query.category)
+    whereClauses.push(eq(schema.tags.category, String(query.category)))
   } else if (query.search) {
-    sql += ' WHERE name LIKE ?1'
-    params.push(`%${query.search}%`)
+    whereClauses.push(like(schema.tags.name, `%${query.search}%`))
   }
 
-  sql += ' ORDER BY name ASC'
+  const rows = await db
+    .select()
+    .from(schema.tags)
+    .where(whereClauses.length ? and(...whereClauses) : undefined)
+    .orderBy(schema.tags.name)
 
-  const stmt = hubDatabase().prepare(sql)
-  if (params.length) stmt.bind(...params)
-  const tags = await stmt.all()
-  return tags.results
+  return rows
 })

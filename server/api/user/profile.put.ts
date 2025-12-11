@@ -1,4 +1,6 @@
 import { User } from '#auth-utils'
+import { db, schema } from 'hub:db'
+import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 const updateProfileSchema = z.object({
@@ -40,41 +42,26 @@ export default eventHandler(async (event) => {
       }
     }
 
-    // Build dynamic update query
-    const updateFields: string[] = []
-    const updateValues: any[] = []
-    
-    Object.entries(updateData).forEach(([key, value]) => {
-      if (value !== undefined) {
-        updateFields.push(`${key} = ?`)
-        updateValues.push(value)
-      }
-    })
+    type UserInsert = typeof schema.users.$inferInsert
+    const updatePayload = Object.fromEntries(
+      Object.entries(updateData).filter(([, value]) => value !== undefined)
+    ) as Partial<UserInsert>
 
-    if (updateFields.length === 0) {
+    if (Object.keys(updatePayload).length === 0) {
       throw createError({
         statusCode: 400,
         statusMessage: 'No fields to update'
       })
     }
 
-    // Add userId and updated_at to the query
-    updateValues.push(new Date().toISOString(), userId)
-
-    const updateQuery = `
-      UPDATE users 
-      SET ${updateFields.join(', ')}, updated_at = ?
-      WHERE id = ?
-    `
-
-    // Execute update
-    const db = hubDatabase()
-    
     try {
-      await db
-      .prepare(updateQuery)
-      .bind(...updateValues)
-      .run()
+      await db.update(schema.users)
+        .set({
+          ...updatePayload,
+          updated_at: new Date().toISOString(),
+        })
+        .where(eq(schema.users.id, userId))
+        .run()
     } catch (error: any) {
       // Handle unique constraint violations
       if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
@@ -99,31 +86,35 @@ export default eventHandler(async (event) => {
       })
     }
 
-    // Fetch updated user data
-    const userRecord = await db
-    .prepare(`
-      SELECT id, name, email, avatar, biography, job, location, language, socials, created_at, updated_at
-      FROM users 
-      WHERE id = ?
-    `)
-    .bind(userId)
-    .run()
+    const updatedUser = await db.query.users.findFirst({
+      columns: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        biography: true,
+        job: true,
+        location: true,
+        language: true,
+        socials: true,
+        created_at: true,
+        updated_at: true,
+      },
+      where: eq(schema.users.id, userId),
+    })
 
-
-    if (!userRecord.success) {
+    if (!updatedUser) {
       throw createError({
         statusCode: 404,
         statusMessage: 'User not found'
       })
     }
 
-    const updatedUser = userRecord.results[0] as unknown as User
-
     // Update session with new user data
     await replaceUserSession(event, {
       user: {
         ...session.user,
-        ...updatedUser,
+        ...(updatedUser as unknown as User),
       }
     })
 

@@ -1,11 +1,15 @@
 // POST /api/posts/[slug]/cover
+import { blob } from 'hub:blob'
+import { db, schema } from 'hub:db'
+import { eq } from 'drizzle-orm'
 import { Jimp } from "jimp"
+import type { ApiPost } from '~~/shared/types/post'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const userId = session.user.id
-  const db = hubDatabase()
-  const hb = hubBlob()
+  const database = db
+  const hb = blob
 
   const identifier = decodeURIComponent(getRouterParam(event, 'identifier') ?? '')
   const formData = await readMultipartFormData(event)
@@ -30,7 +34,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const post: ApiPost | null = await getPostByIdentifier(db, identifier)
+  const post: ApiPost | null = await getPostByIdentifier(database, identifier)
 
   if (!post) {
     throw createError({
@@ -65,8 +69,8 @@ export default defineEventHandler(async (event) => {
   const generatedVariants = []
 
   // Upload original image
-  const blob = new Blob([new Uint8Array(file)], { type })
-  const originalBlob = await hb.put(`original.${extension}`, blob, {
+  const fileBlob = new Blob([new Uint8Array(file)], { type })
+  const originalBlob = await hb.put(`original.${extension}`, fileBlob, {
     prefix: coverFolder,
   })
 
@@ -81,9 +85,9 @@ export default defineEventHandler(async (event) => {
   for (const size of sizes) {
     const resized = originalImage.clone().resize({ w: size.width })
     const buffer = await resized.getBuffer(type)
-    const blob = new Blob([new Uint8Array(buffer)], { type })
+    const resizedBlob = new Blob([new Uint8Array(buffer)], { type })
     const response = await hb
-      .put(`${coverFolder}/${size.suffix}.${extension}`, blob, {
+      .put(`${coverFolder}/${size.suffix}.${extension}`, resizedBlob, {
         addRandomSuffix: false,
       })
 
@@ -98,13 +102,15 @@ export default defineEventHandler(async (event) => {
   // Persist the canonical image path (point to the original variant)
   const originalPath = `/${originalBlob.pathname.replace(/^\/+/, '')}`
 
-  await db.prepare(`
-    UPDATE posts 
-    SET image_src = ?, image_alt = ?, image_ext = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `)
-  .bind(originalPath, fileName, extension, post.id)
-  .run()
+  await database.update(schema.posts)
+    .set({
+      image_src: originalPath,
+      image_alt: fileName,
+      image_ext: extension,
+      updated_at: new Date().toISOString(),
+    })
+    .where(eq(schema.posts.id, post.id))
+    .run()
 
   return { 
     image: {

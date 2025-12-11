@@ -1,15 +1,20 @@
 // DELETE /api/tags/:id
+import { db, schema } from 'hub:db'
+import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
-  const id = event.context.params?.id
-  if (!id) {
+  const idParam = event.context.params?.id
+  if (!idParam) {
     throw createError({ statusCode: 400, statusMessage: 'Tag id is required' })
   }
-  const stmt = hubDatabase().prepare('DELETE FROM tags WHERE id = ?1').bind(id)
-  const result = await stmt.run()
-  // D1's .run() does not return .changes, so check success/meta
-  if (!result.success || (result.meta?.rows_written ?? 0) === 0) {
+
+  const id = Number(idParam)
+  const result = await db.delete(schema.tags).where(eq(schema.tags.id, id)).run()
+  const rowsWritten = Number((result as any)?.rowsAffected ?? (result as any)?.meta?.changes ?? (result as any)?.meta?.rows_written ?? 0)
+
+  if (!rowsWritten) {
     throw createError({ statusCode: 404, statusMessage: 'Tag not found' })
   }
+
   return { id }
 })

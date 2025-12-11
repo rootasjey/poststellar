@@ -1,20 +1,24 @@
 // PUT /api/tags/:id
+import { db, schema } from 'hub:db'
+import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
-  const id = event.context.params?.id
+  const idParam = event.context.params?.id
   const body = await readBody(event)
-  if (!id || !body?.name) {
+  if (!idParam || !body?.name) {
     throw createError({ statusCode: 400, statusMessage: 'Tag id and name are required' })
   }
+  const id = Number(idParam)
   const name = body.name.trim()
   const category = body.category?.trim() || 'general'
 
-  const stmt = hubDatabase().prepare('UPDATE tags SET name = ?1, category = ?2 WHERE id = ?3').bind(name, category, id)
-  const result = await stmt.run()
-  if (!result.success || (result.meta?.rows_written ?? 0) === 0) {
+  const result = await db.update(schema.tags).set({ name, category }).where(eq(schema.tags.id, id)).run()
+  const rowsWritten = Number((result as any)?.rowsAffected ?? (result as any)?.meta?.changes ?? (result as any)?.meta?.rows_written ?? 0)
+
+  if (!rowsWritten) {
     throw createError({ statusCode: 404, statusMessage: 'Tag not found' })
   }
-  // Fetch the updated tag
-  const tag = await hubDatabase().prepare('SELECT * FROM tags WHERE id = ?1').bind(id).first()
+
+  const tag = await db.query.tags.findFirst({ where: eq(schema.tags.id, id) })
   return tag
 })

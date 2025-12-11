@@ -1,15 +1,18 @@
 // POST /api/posts/[identifier]/images
 // Upload images used inside the article/editor. Stored under posts/<id>/images/
+import { blob } from 'hub:blob'
+import { db, schema } from 'hub:db'
+import type { ApiPost } from '~~/shared/types/post'
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const userId = session.user.id
-  const db = hubDatabase()
-  const hb = hubBlob()
+  const database = db
+  const hb = blob
 
   const identifier = decodeURIComponent(getRouterParam(event, 'identifier') ?? '')
   if (!identifier) throw createError({ statusCode: 400, message: 'Post identifier is required' })
 
-  const post: ApiPost | null = await getPostByIdentifier(db, identifier)
+  const post: ApiPost | null = await getPostByIdentifier(database, identifier)
   if (!post) throw createError({ statusCode: 404, message: 'Post not found' })
   if (post.user_id !== userId) throw createError({ statusCode: 403, message: 'You are not authorized to upload images for this post' })
 
@@ -38,9 +41,9 @@ export default defineEventHandler(async (event) => {
 
     // Create a blob and upload
     const buffer = filePart.data as ArrayBuffer | Uint8Array | Buffer
-    const blob = new Blob([new Uint8Array(buffer as any)], { type })
+    const blobFile = new Blob([new Uint8Array(buffer as any)], { type })
 
-    const stored = await hb.put(`${imagesFolder}/${pathnameFile}`, blob, { addRandomSuffix: true })
+    const stored = await hb.put(`${imagesFolder}/${pathnameFile}`, blobFile, { addRandomSuffix: true })
 
     // stored.pathname should be like 'posts/<id>/images/<filename>'
     const storedPath = stored.pathname.replace(/^\/+/, '')
@@ -55,11 +58,15 @@ export default defineEventHandler(async (event) => {
     let imageRowId: number | null = null
     try {
       const size = (buffer as any)?.byteLength ?? null
-      const insertResult: any = await db.prepare(`
-        INSERT INTO post_images (post_id, pathname, filename, content_type, size, in_use)
-        VALUES (?, ?, ?, ?, ?, 0)
-      `).bind(post.id, `/${storedPath}`, filename, type, size).run()
-      imageRowId = insertResult?.meta?.last_row_id ?? null
+      const insertResult: any = await database.insert(schema.post_images).values({
+        post_id: post.id,
+        pathname: `/${storedPath}`,
+        filename,
+        content_type: type,
+        size,
+        in_use: false,
+      }).run()
+      imageRowId = insertResult?.lastInsertRowid ?? insertResult?.meta?.last_row_id ?? null
     } catch (err) {
       // Non-fatal — we still consider the upload successful even if metadata insert fails
       console.warn('Failed to persist post_images metadata:', err)

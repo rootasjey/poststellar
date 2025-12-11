@@ -1,36 +1,41 @@
 // DELETE /api/posts/:identifier
+import { blob } from 'hub:blob'
+import { db, schema } from 'hub:db'
+import { and, eq } from 'drizzle-orm'
+import type { ApiPost } from '~~/shared/types/post'
+import { convertApiToPost } from '~~/server/utils/post'
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
-  const db = hubDatabase()
-  const blobStorage = hubBlob()
+  const database = db
 
   const identifier = decodeURIComponent(getRouterParam(event, 'identifier') ?? '')
   if (!identifier) { throw createError({ statusCode: 400, message: 'Post identifier is required' }) }
 
   const userId = session.user.id
-  const apiPost: ApiPost | null = await getPostByIdentifier(db, identifier)
+  const apiPost: ApiPost | null = await getPostByIdentifier(database, identifier)
   
   if (!apiPost) { throw createError({ statusCode: 404, message: 'Post not found.' })}
   if (apiPost.user_id !== userId) { throw createError({ statusCode: 403, message: "You are not authorized to delete this post" }) }
 
-  if (apiPost.blob_path) { await blobStorage.delete(apiPost.blob_path) }
+  if (apiPost.blob_path) { await blob.del(apiPost.blob_path) }
 
   if (apiPost.image_src) {
     const prefix = apiPost.image_src as string
-    const blobList = await hubBlob().list({ prefix })
+    const blobList = await blob.list({ prefix })
     
     for (const blobItem of blobList.blobs) {
-      await hubBlob().delete(blobItem.pathname)
+      await blob.del(blobItem.pathname)
     }
   }
 
   // Delete by numeric id (safer) — `getPostByIdentifier` already resolved the post
-  const deleteResult = await db
-  .prepare(`DELETE FROM posts WHERE id = ? AND user_id = ?`)
-  .bind(apiPost.id, userId)
-  .run()
+  const deleteResult = await database
+    .delete(schema.posts)
+    .where(and(eq(schema.posts.id, apiPost.id), eq(schema.posts.user_id, userId)))
+    .run()
 
-  if (!deleteResult.success) {
+  const rowsDeleted = Number((deleteResult as any)?.rowsAffected ?? (deleteResult as any)?.meta?.changes ?? (deleteResult as any)?.meta?.rows_written ?? 0)
+  if (!rowsDeleted) {
     throw createError({ statusCode: 500, message: 'Failed to delete post' })
   }
 

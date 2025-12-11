@@ -1,4 +1,4 @@
--- Add table for inline post images
+-- Add table for inline post images (migrated from 20251121_add_post_images_table.sql)
 CREATE TABLE IF NOT EXISTS post_images (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   post_id INTEGER NOT NULL,

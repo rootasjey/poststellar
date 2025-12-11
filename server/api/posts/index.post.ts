@@ -1,7 +1,10 @@
 // POST /api/posts/create
+import { blob } from 'hub:blob'
+import { db, schema } from 'hub:db'
+import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import type { ApiTag } from '~~/shared/types/tags'
-import { ApiPost, Post } from '~~/shared/types/post'
+import { ApiPost } from '~~/shared/types/post'
 import { convertApiToPost, createArticle, createPostData } from '~~/server/utils/post'
 import { upsertPostTags } from '~~/server/utils/tags'
 
@@ -16,55 +19,46 @@ const createPostSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
-  const db = hubDatabase()
-  const blobStorage = hubBlob()
+  const blobStorage = blob
   const body = await readValidatedBody(event, createPostSchema.parse)
 
   const userId = session.user.id
   const postData = createPostData(body, userId)
 
   // Insert post without blob_path first
-  const result = await db.prepare(`
-    INSERT INTO posts (
-      description, image_src, image_alt,
-      language, links, metrics_comments, metrics_likes, metrics_views,
-      name, slug, user_id, status
-    ) VALUES (
-      ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12
-    )
-  `)
-  .bind(
-    postData.description,
-    postData.image_src,
-    postData.image_alt,
-    postData.language,
-    postData.links,
-    postData.metrics_comments,
-    postData.metrics_likes,
-    postData.metrics_views,
-    postData.name,
-    postData.slug,
-    postData.user_id,
-    postData.status
-  ).run()
+  const result = await db.insert(schema.posts).values({
+    description: postData.description,
+    image_src: postData.image_src,
+    image_alt: postData.image_alt,
+    language: postData.language,
+    links: postData.links,
+    metrics_comments: postData.metrics_comments,
+    metrics_likes: postData.metrics_likes,
+    metrics_views: postData.metrics_views,
+    name: postData.name,
+    slug: postData.slug,
+    user_id: postData.user_id,
+    status: postData.status,
+  }).run()
 
-  const createdApiPost: ApiPost | null = await db
-    .prepare(`SELECT * FROM posts WHERE id = ?1`)
-    .bind(result.meta.last_row_id)
-    .first()
+  const insertedId = Number((result as any)?.lastInsertRowid ?? (result as any)?.meta?.last_row_id ?? 0)
 
-  if (!createdApiPost) { 
+  const createdApiPostRow = insertedId
+    ? await db.query.posts.findFirst({ where: eq(schema.posts.id, insertedId) })
+    : null
+
+  if (!createdApiPostRow) { 
     throw createError({ statusCode: 500, message: 'Failed to fetch created post.' }) 
   }
+
+  const createdApiPost = createdApiPostRow as ApiPost
 
   // Now create the article blob using the post's ID
   const article = createArticle()
   const blob_path = `posts/${createdApiPost.id}/article.json`
   await blobStorage.put(blob_path, JSON.stringify(article))
 
-  await db.prepare(`UPDATE posts SET blob_path = ? WHERE id = ?`)
-    .bind(blob_path, createdApiPost.id)
-    .run()
+  await db.update(schema.posts).set({ blob_path }).where(eq(schema.posts.id, createdApiPost.id as number)).run()
 
   createdApiPost.blob_path = blob_path
 

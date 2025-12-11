@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "poststellar",
+  "main": "./.output/server/index.mjs",
+  "compatibility_date": "2025-07-15",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "<your-d1-name>",
+      "database_id": "<your-d1-id>"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BLOB",
+      "bucket_name": "<your-r2-bucket>"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "<your-kv-id>"
+    },
+    {
+      "binding": "CACHE",
+      "id": "<your-cache-kv-id>"
+    }
+  ],
+  "vars": {
+    "NUXT_PUBLIC_SITE_URL": "https://constellate.cc"
+  }
+}
