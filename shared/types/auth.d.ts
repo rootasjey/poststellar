@@ -10,6 +10,7 @@ declare module '#auth-utils' {
     location: string
     email: string
     name: string
+    slug: string
     role: string
     socials: string
     updated_at: string

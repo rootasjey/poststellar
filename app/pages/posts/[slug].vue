@@ -58,8 +58,9 @@
         <div class="max-w-3xl mx-auto py-6">
           <div class="flex items-center justify-between flex-wrap gap-4">
             <!-- Author Info -->
-            <div v-if="post.user" class="flex items-center gap-3">
-              <img 
+            <NLink v-if="post.user" :to="`/authors/${post.user.slug || post.user.id}`" class="flex items-center gap-3">
+              <NuxtImg 
+                provider="hubblob" 
                 v-if="post.user.avatar"
                 :src="post.user.avatar" 
                 :alt="post.user.name || 'User'"
@@ -68,7 +69,7 @@
               <div v-if="post.user.name">
                 <div class="font-semibold">{{ post.user.name }}</div>
               </div>
-            </div>
+            </NLink>
 
             <!-- Social Share Buttons -->
             <div class="flex gap-2">
@@ -121,8 +122,9 @@
         <div class="max-w-3xl mx-auto border-t pt-8">
           <div class="flex items-center justify-between gap-8 flex-wrap md:flex-nowrap">
             <!-- Left: Avatar and Name -->
-            <div class="flex items-center gap-6">
-              <img 
+            <NLink :to="`/authors/${post.user.slug || post.user.id}`" class="flex items-center gap-6">
+              <NuxtImg 
+                provider="hubblob"
                 v-if="post.user.avatar"
                 :src="post.user.avatar" 
                 :alt="post.user.name || 'User'"
@@ -131,7 +133,7 @@
               <div>
                 <h3 class="text-md font-bold mb-1">{{ post.user.name }}</h3>
               </div>
-            </div>
+            </NLink>
 
             <!-- Social Share Buttons -->
             <div class="flex gap-2">
@@ -198,7 +200,6 @@ const { enhancePost, formatPostDate } = usePost()
 
 // Fetch post data from API
 const { data: post, error } = await useFetch<Post>(`/api/posts/${slug}`)
-
 if (error.value || !post.value) {
   throw createError({
     statusCode: 404,

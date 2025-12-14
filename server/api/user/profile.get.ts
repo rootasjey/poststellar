@@ -11,6 +11,7 @@ export default eventHandler(async (event) => {
       columns: {
         id: true,
         name: true,
+        slug: true,
         email: true,
         avatar: true,
         biography: true,

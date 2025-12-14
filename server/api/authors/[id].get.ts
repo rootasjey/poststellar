@@ -1,17 +1,17 @@
 import { db, schema } from 'hub:db'
 import { eq } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const params = getRouterParams(event)
-  const id = Number(params.id)
-  if (!Number.isFinite(id)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid author id' })
-  }
+  const identifier = params.id
+  const maybeId = Number(identifier)
 
-  const row = await db
+  const baseSelect = db
     .select({
       id: schema.users.id,
       name: schema.users.name,
+      slug: schema.users.slug,
       avatar: schema.users.avatar,
       biography: schema.users.biography,
       job: schema.users.job,
@@ -19,8 +19,10 @@ export default defineEventHandler(async (event) => {
       socials: schema.users.socials,
     })
     .from(schema.users)
-    .where(eq(schema.users.id, id))
-    .get()
+
+  const row = Number.isFinite(maybeId)
+    ? await baseSelect.where(eq(schema.users.id, maybeId)).get()
+    : await baseSelect.where(sql`LOWER(${schema.users.slug}) = LOWER(${identifier})`).get()
 
   if (!row) {
     throw createError({ statusCode: 404, statusMessage: 'Author not found' })

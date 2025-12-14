@@ -183,7 +183,7 @@ async function select(item: any) {
   } else if (item.type === 'tag') {
     await router.push({ path: '/tags', query: { tag: item.name } })
   } else if (item.type === 'author') {
-    await router.push({ path: `/authors/${item.id}` })
+    await router.push({ path: `/authors/${item.slug || item.id}` })
   }
 }
 </script>

@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
     ? and(...conditions, sql`LOWER(${schema.tags.name}) = LOWER(${tag!.trim()})`)
     : and(...conditions)
 
-  // Filter by author: either numeric id or name
+  // Filter by author: numeric id, slug, or name
   const a = author && author.trim()
   let finalQuery: any = withJoins
   let finalWhere = where
@@ -54,8 +54,11 @@ export default defineEventHandler(async (event) => {
       finalWhere = and(where, eq(schema.posts.user_id, Number(a)))
     } else {
       // join users table and filter by name (case-insensitive)
-      finalQuery = (finalQuery as any).innerJoin(schema.users, eq(schema.users.id, schema.posts.user_id))
-      finalWhere = and(where, sql`LOWER(${schema.users.name}) = LOWER(${a})`)
+      finalQuery = finalQuery.innerJoin(schema.users, eq(schema.users.id, schema.posts.user_id))
+      finalWhere = and(
+        where,
+        sql`(LOWER(${schema.users.slug}) = LOWER(${a}) OR LOWER(${schema.users.name}) = LOWER(${a}))`
+      )
     }
   }
 

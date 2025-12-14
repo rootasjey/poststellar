@@ -5,6 +5,7 @@ export default defineEventHandler(async () => {
     .select({
       id: schema.users.id,
       name: schema.users.name,
+      slug: schema.users.slug,
       avatar: schema.users.avatar,
       biography: schema.users.biography,
       job: schema.users.job,

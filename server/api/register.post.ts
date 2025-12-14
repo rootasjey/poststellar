@@ -4,6 +4,10 @@ import { z } from 'zod'
 
 const bodySchema = z.object({
   name: z.string().min(2).max(50),
+  slug: z
+    .string()
+    .regex(/^[a-z0-9-]{1,64}$/i, 'Slug must be lowercase letters, numbers, or hyphens')
+    .optional(),
   email: z.string().email(),
   password: z.string().min(8),
   biography: z.string().optional(),
@@ -15,7 +19,7 @@ const bodySchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const body = await readValidatedBody(event, bodySchema.parse)
-  const { name, email, password, biography, job, language, location, socials } = body
+  const { name, slug, email, password, biography, job, language, location, socials } = body
 
   try {
     // Check if user already exists
@@ -34,8 +38,27 @@ export default defineEventHandler(async (event) => {
     const hashedPassword = await hashPassword(password)
 
     // Insert new user
+    // Generate slug if not provided
+    const baseSlug = (slug ?? name)
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 64)
+    let finalSlug = baseSlug || undefined
+
+    if (finalSlug) {
+      // Ensure uniqueness by appending -id after insert if collision occurs; here we pre-check
+      const slugExists = await db.query.users.findFirst({ where: eq(schema.users.slug, finalSlug) })
+      if (slugExists) {
+        // Fallback: append a short random suffix
+        finalSlug = `${finalSlug}-${Math.random().toString(36).slice(2, 6)}`
+      }
+    }
+
     const insertUser: typeof schema.users.$inferInsert = {
       name,
+      slug: finalSlug ?? '',
       email,
       password: hashedPassword,
       biography: biography || '',
@@ -80,6 +103,7 @@ export default defineEventHandler(async (event) => {
       language: newUser.language ?? 'en',
       location: newUser.location ?? '',
       name: newUser.name,
+      slug: newUser.slug,
       role: newUser.role,
       socials: newUser.socials ?? '[]',
       updated_at: newUser.updated_at,

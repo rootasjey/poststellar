@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
       const name = r.user.name || ''
       const biography = r.user.biography || ''
       const score = baseScore(2) + textScore(name, qNorm) + textScore(biography, qNorm) * 0.3
-      return { type: 'author', id: r.user.id, name, biography, score }
+      return { type: 'author', id: r.user.id, slug: r.user.slug, name, biography, score }
     })
     .filter((a: any) => a.score > 0)
     .sort(descByScore)

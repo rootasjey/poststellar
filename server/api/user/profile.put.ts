@@ -5,6 +5,10 @@ import { z } from 'zod'
 
 const updateProfileSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name too long').optional(),
+  slug: z
+    .string()
+    .regex(/^[a-z0-9-]{1,64}$/i, 'Slug must be lowercase letters, numbers, or hyphens')
+    .optional(),
   email: z.string().email('Invalid email format').optional(),
   avatar: z.string().url('Invalid avatar URL').optional().or(z.literal('')),
   biography: z.string().max(1000, 'Biography too long').optional(),
@@ -77,6 +81,12 @@ export default eventHandler(async (event) => {
             statusMessage: 'Username already exists'
           })
         }
+        if (error.message.includes('idx_users_slug')) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Slug already exists'
+          })
+        }
       }
       
       console.error('Database error updating user profile:', error)
@@ -90,6 +100,7 @@ export default eventHandler(async (event) => {
       columns: {
         id: true,
         name: true,
+        slug: true,
         email: true,
         avatar: true,
         biography: true,

@@ -3,7 +3,7 @@
     <div class="container mx-auto px-6 max-w-5xl space-y-10">
       <div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div class="flex items-start gap-4">
-          <img v-if="author?.avatar" :src="author.avatar" :alt="author.name" class="w-24 h-24 rounded-full object-cover" />
+          <NuxtImg provider="hubblob" v-if="author?.avatar" :src="author.avatar" :alt="author.name" class="w-24 h-24 rounded-full object-cover" />
           <div v-else class="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-2xl font-semibold">
             {{ authorInitials }}
           </div>
@@ -53,7 +53,7 @@
             class="p-5 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600 transition-colors bg-white dark:bg-gray-900 space-y-2"
           >
             <p class="text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">{{ post.status === 'published' ? 'Published' : post.status }}</p>
-            <h3 class="text-xl font-semibold leading-tight line-clamp-2">{{ post.title }}</h3>
+            <h3 class="text-xl font-semibold leading-tight line-clamp-2">{{ post.name }}</h3>
             <p v-if="post.description" class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{{ post.description }}</p>
           </NuxtLink>
         </div>
@@ -70,6 +70,7 @@ import type { PostStatus } from '~~/shared/types/post'
 type Author = {
   id: number
   name: string
+  slug?: string
   avatar: string
   biography: string
   job: string
@@ -80,15 +81,15 @@ type Author = {
 type PostSummary = {
   id: number
   slug: string
-  title: string
+  name: string
   description: string | null
   status: PostStatus
 }
 
 const route = useRoute()
-const authorId = route.params.id
+const slug = String(route.params.slug)
 
-const { data: authorData, error: authorError } = await useFetch<Author>(`/api/authors/${authorId}`)
+const { data: authorData, error: authorError } = await useFetch<Author>(`/api/authors/${slug}`)
 const author = computed(() => authorData.value)
 
 const authorInitials = computed(() => {
@@ -127,7 +128,7 @@ const {
   pending: postsPending,
   error: postsError,
 } = await useFetch<PostSummary[]>(`/api/posts`, {
-  params: { author: authorId, status: 'published' },
+  params: { author: slug, status: 'published' },
 })
 
 const posts = computed(() => postsData.value ?? [])

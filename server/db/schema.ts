@@ -13,6 +13,7 @@ export const users = sqliteTable('users', {
   last_login_at: text('last_login_at'),
   location: text('location').notNull().default(''),
   name: text('name').notNull().unique(),
+  slug: text('slug'),
   password: text('password').notNull(),
   role: text('role').notNull().default('user'),
   socials: text('socials').notNull().default('[]'),

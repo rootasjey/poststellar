@@ -63,7 +63,7 @@ export async function getPostByIdentifier(db: any, identifier: string | number) 
     : eq(schema.posts.slug, String(identifier))
 
   const rows = await db
-    .select({ post: schema.posts, user_avatar: schema.users.avatar, user_name: schema.users.name })
+    .select({ post: schema.posts, user_avatar: schema.users.avatar, user_name: schema.users.name, user_slug: schema.users.slug })
     .from(schema.posts)
     .innerJoin(schema.users, eq(schema.users.id, schema.posts.user_id))
     .where(whereClause)
@@ -77,6 +77,7 @@ export async function getPostByIdentifier(db: any, identifier: string | number) 
     ...(row.post as ApiPost),
     user_avatar: row.user_avatar,
     user_name: row.user_name,
+    user_slug: row.user_slug,
   }
 }
 
@@ -133,6 +134,7 @@ export function convertApiToPost(
       id: apiPost.user_id,
       avatar: options?.userAvatar ?? "",
       name: options?.userName ?? "",
+      slug: (apiPost as any).user_slug ?? undefined,
     },
   }
 }
