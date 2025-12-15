@@ -102,7 +102,7 @@ const topPosts = computed(() => (data.value ?? []).slice(0, 4).map(p => enhanceP
 const today = new Date()
 const formatted = today.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
 const dummyHero = [
-  { title: 'Welcome to Poststellar', date: formatted, author: 'Get started', img: {src: "https://images.pexels.com/photos/1406282/pexels-photo-1406282.jpeg"} },
+  { title: 'Welcome to Corpinot', date: formatted, author: 'Get started', img: {src: "https://images.pexels.com/photos/1406282/pexels-photo-1406282.jpeg"} },
   { title: 'Create your first post', date: formatted, author: 'Tip', img: {src: "https://images.pexels.com/photos/159618/still-life-school-retro-ink-159618.jpeg"} },
   { title: 'Add a cover image', date: formatted, author: 'Suggestion', img: {src: "https://images.pexels.com/photos/1765033/pexels-photo-1765033.jpeg"} },
   { title: 'Use tags to organize', date: formatted, author: 'Hint', img: {src: "https://images.pexels.com/photos/7422438/pexels-photo-7422438.jpeg"} }

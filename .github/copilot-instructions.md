@@ -1,4 +1,4 @@
-# Copilot instructions for this repo (poststellar)
+# Copilot instructions for this repo (corpinot)
 
 These notes help AI agents navigate and extend this Nuxt 4 app quickly and correctly.
 
