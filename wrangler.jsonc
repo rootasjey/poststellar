@@ -9,24 +9,24 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "<your-d1-name>",
-      "database_id": "<your-d1-id>"
+      "database_name": "corpinot",
+      "database_id": "eec181bd-22ad-4d95-9841-01b61979a24e"
     }
   ],
   "r2_buckets": [
     {
       "binding": "BLOB",
-      "bucket_name": "<your-r2-bucket>"
+      "bucket_name": "corpinot"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "KV",
-      "id": "<your-kv-id>"
+      "id": "133e2219eb3943a29470cb7f8e71c786"
     },
     {
       "binding": "CACHE",
-      "id": "<your-cache-kv-id>"
+      "id": "36e6cc57a6374484a184cdd5ef868c23"
     }
   ],
   "vars": {
