@@ -2,8 +2,8 @@
   <section class="py-8 md:py-12 bg-[#F8F9FA] dark:bg-gray-900">
     <div class="container mx-auto px-4 max-w-7xl">
       <!-- Loading -->
-      <div v-if="pending" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 md:gap-6 xl:gap-4">
-        <div v-for="i in 4" :key="i" class="flex gap-3 md:gap-4 items-start animate-pulse">
+      <div v-if="pending" :class="scrollerClasses">
+        <div v-for="i in 4" :key="i" :class="['flex gap-3 md:gap-4 items-start animate-pulse', itemClass]">
           <div class="rounded-xl w-24 h-24 md:w-28 md:h-28 xl:w-24 xl:h-24 bg-gray-200 dark:bg-gray-800"></div>
           <div class="flex-1 space-y-2">
             <div class="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4"></div>
@@ -24,11 +24,11 @@
       />
 
       <!-- Content -->
-      <div v-else-if="topPosts.length" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 md:gap-6 xl:gap-4">
+      <div v-else-if="topPosts.length" :class="scrollerClasses">
         <article
           v-for="post in topPosts"
           :key="post.slug"
-          class="group"
+          :class="['group', itemClass]"
         >
           <NuxtLink :to="`/posts/${post.slug}`" class="flex gap-3 md:gap-4 items-start">
             <!-- Image on Left (smaller) -->
@@ -56,8 +56,8 @@
       </div>
 
       <!-- Empty: dummy row matching final UI -->
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 md:gap-6 xl:gap-4 justify-items-center">
-        <article v-for="(item, i) in dummyHero" :key="i" class="group w-90 xl:w-auto">
+      <div v-else :class="[scrollerClasses, 'justify-items-center']">
+        <article v-for="(item, i) in dummyHero" :key="i" :class="['group w-90 xl:w-auto', itemClass]">
           <div class="flex gap-3 md:gap-4 items-start">
             <!-- Image placeholder on Left -->
             <div class="relative overflow-hidden rounded-xl w-24 h-24 md:w-28 md:h-28 xl:w-24 xl:h-24 flex-shrink-0 bg-gray-200 dark:bg-gray-800">
@@ -101,6 +101,9 @@ const { data, pending, error } = await useFetch<Post[]>('/api/posts', {
 })
 
 const topPosts = computed(() => (data.value ?? []).map(p => enhancePost(p)))
+
+const scrollerClasses = 'flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory md:grid md:grid-cols-2 xl:grid-cols-4 md:gap-6 xl:gap-4 md:overflow-visible md:snap-none'
+const itemClass = 'min-w-[16rem] flex-shrink-0 snap-start md:min-w-0'
 
 // Dummy items when empty – match the final UI
 const today = new Date()

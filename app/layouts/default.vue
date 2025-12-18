@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col bg-white dark:bg-gray-950 font-text">
     <header
-      class="sticky top-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur transition-all duration-300"
+      class="sticky top-0 z-10 transition-all duration-300"
       :class="[
         isScrolled ? 'shadow-sm' : '',
         (isScrolled && isScrollingDown) ? '-translate-y-full' : 'translate-y-0'
@@ -10,10 +10,11 @@
     >
       <AppHeader />
     </header>
-    <main class="flex-1">
+    <main class="flex-1 pb-20 md:pb-0">
       <slot />
     </main>
     <AppFooter />
+    <MobileBottomNav class="lg:hidden" />
   </div>
 </template>
 

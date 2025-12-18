@@ -85,6 +85,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { Post } from '~~/shared/types/post'
+import {
+  FEATURED_PROJECT_FALLBACK_IMAGE,
+  FEATURED_PROJECT_TAG,
+  FEATURED_PROJECTS_KEY,
+  FALLBACK_PROJECTS,
+} from '~/utils/featuredProjects'
 
 const { enhancePost } = usePost()
 
@@ -98,10 +104,9 @@ function scrollProjects(direction: 'left' | 'right') {
 }
 
 // Fetch posts with the featured project tag
-const FEATURED_PROJECT_TAG = 'featured project'
-
 const { data, pending, error } = await useFetch<Post[]>('/api/posts', {
-  query: { tag: FEATURED_PROJECT_TAG, limit: 12 }
+  query: { tag: FEATURED_PROJECT_TAG, limit: 12 },
+  key: FEATURED_PROJECTS_KEY,
 })
 
 const projects = computed(() => {
@@ -109,38 +114,12 @@ const projects = computed(() => {
     return data.value.map(p => enhancePost(p)).map(post => ({
       slug: post.slug,
       title: post.name,
-      image: post.image?.src || 'https://images.pexels.com/photos/1181467/pexels-photo-1181467.jpeg'
+      image: post.image?.src || FEATURED_PROJECT_FALLBACK_IMAGE,
     }))
   }
   
   // Dummy projects when empty
-  return [
-    {
-      slug: 'a-game-of-life',
-      title: 'A Game of Life: Building the Conway\'s Simulation',
-      image: 'https://images.pexels.com/photos/776654/pexels-photo-776654.jpeg?w=800&h=600&fit=crop',
-    },
-    {
-      slug: 'mobile-app-design',
-      title: 'Mobile App Design: Creating Intuitive User Experiences',
-      image: 'https://images.pexels.com/photos/8780204/pexels-photo-8780204.jpeg?w=800&h=600&fit=crop',
-    },
-    {
-      slug: 'brand-identity-redesign',
-      title: 'Brand Identity Redesign: From Concept to Launch',
-      image: 'https://images.pexels.com/photos/2993940/pexels-photo-2993940.jpeg?w=800&h=600&fit=crop',
-    },
-    {
-      slug: 'web-application-dashboard',
-      title: 'Web Application Dashboard: Data Visualization Project',
-      image: 'https://images.pexels.com/photos/1171084/pexels-photo-1171084.jpeg?w=800&h=600&fit=crop',
-    },
-    {
-      slug: 'automation-workflow',
-      title: 'Automation Workflow: Streamlining Business Processes',
-      image: 'https://images.pexels.com/photos/168866/pexels-photo-168866.jpeg?w=800&h=600&fit=crop',
-    },
-  ]
+  return FALLBACK_PROJECTS
 })
 </script>
 

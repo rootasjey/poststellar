@@ -6,7 +6,7 @@
       </h2>
 
       <!-- Loading -->
-      <div v-if="pending" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10 md:gap-y-12">
+      <div v-if="pending" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 sm:gap-x-6 gap-y-8 md:gap-y-12">
         <CardSkeleton v-for="i in 6" :key="i" :lines="3" />
       </div>
 
@@ -22,7 +22,7 @@
       />
 
       <!-- Empty: dummy grid matching final UI -->
-      <div v-else-if="!enhancedPosts.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10 md:gap-y-12">
+      <div v-else-if="!enhancedPosts.length" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 sm:gap-x-6 gap-y-8 md:gap-y-12">
         <article v-for="i in 6" :key="i" class="group flex flex-col">
           <!-- Image placeholder -->
           <div class="relative overflow-hidden rounded-2xl aspect-[4/3] mb-4 bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
@@ -42,7 +42,7 @@
       </div>
 
       <!-- Grid layout for posts -->
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10 md:gap-y-12">
+      <div v-else class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 sm:gap-x-6 gap-y-8 md:gap-y-12">
         <article
           v-for="post in enhancedPosts"
           :key="post.slug"

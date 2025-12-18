@@ -97,12 +97,46 @@
     </div>
   </aside>
 
-  <header class="border-b"
-    :class="{ 'bg-[#F8F9FA] dark:bg-gray-900': !isScrolled }"
-  >
+  <header>
     <div class="mx-auto">
+      <!-- Mobile Top Bar -->
+      <div class="lg:hidden flex items-center justify-between px-4 py-3"
+        :class="{
+          'bg-white/80 dark:bg-gray-950/80 backdrop-blur': isScrolled 
+        }"
+      >
+        <NuxtLink to="/" class="ml-1 flex items-center gap-2 bg-black/10 px-3 py-1 rounded-full">
+          <span 
+            class="font-title font-bold text-xl"
+            :class="{
+              'text-white': !isScrolled && router.currentRoute.value.path === '/',
+            }"
+          >
+          corpinot
+        </span>
+        </NuxtLink>
+        <div class="flex items-center gap-3">
+          <NButton
+            icon
+            btn="ghost-gray"
+            type="button"
+            class="hover:scale-105 active:scale-99 transition-transform"
+            @click="toggleTheme"
+            aria-label="Toggle theme"
+          >
+            <span class="i-ph-moon-duotone block dark:hidden text-lg" />
+            <span class="i-ph-sun-duotone hidden dark:block text-lg" />
+          </NButton>
+        </div>
+      </div>
+
       <!-- Desktop Header -->
-      <div class="hidden lg:block py-6">
+      <div class="hidden lg:block py-6 border-b"
+        :class="{ 
+          'bg-[#F8F9FA] dark:bg-gray-900': !isScrolled,
+          'bg-white/80 dark:bg-gray-950/80 backdrop-blur': isScrolled 
+        }"
+      >
         <!-- Row 1: Centered Logo -->
         <div
           class="flex justify-center px-6 border-b border-gray-200 dark:border-gray-800 transition-all duration-300"
@@ -119,9 +153,9 @@
         </div>
 
         <!-- Row 2: Social | Navigation | Auth -->
-        <div class="flex items-center justify-between px-6 max-w-7xl mx-auto">
+        <div class="grid items-center px-6 max-w-7xl mx-auto grid-cols-3">
           <!-- Left: Social Icons -->
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 justify-self-start">
             <a
               v-for="s in orderedSocials"
               :key="s.platform + s.url"
@@ -135,7 +169,7 @@
           </div>
 
           <!-- Center: Navigation Links -->
-          <nav class="flex items-center gap-8 text-sm font-medium">
+          <nav class="flex items-center gap-8 text-sm font-medium justify-self-center">
             <NuxtLink to="/" class="font-600 hover:underline decoration-offset-6 text-gray-700 dark:text-gray-100 hover:text-black dark:hover:text-white transition-colors">
               HOME
             </NuxtLink>
@@ -151,7 +185,7 @@
           </nav>
 
           <!-- Right: Auth + Search + Theme -->
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 justify-self-end">
             <template v-if="!isLoggedIn">
               <NuxtLink to="/signin" class="text-sm font-600 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors">
                 Sign in
@@ -245,6 +279,10 @@ const mobileThemeOpen = computed({
 const { open: openSearchModal } = useGlobalSearch()
 function openSearch() { openSearchModal() }
 
+function goSearch() {
+  router.push('/search')
+}
+
 async function handleLogout() {
   try {
     await $fetch('/api/logout', { method: 'POST' })
@@ -258,7 +296,7 @@ async function handleLogout() {
 
 const dropdownItems = computed(() => {
   const items = [
-    { label: 'Profile', onSelect: () => router.push('/profile') },
+    { label: 'Profile', onSelect: () => { router.push('/profile') } },
     { label: 'Logout', onSelect: async () => { await handleLogout() } },
   ]
 

@@ -247,6 +247,18 @@ const pexelsAttributions: Attribution[] = [
     alt: 'Photo de Jr  Satilite',
     caption: 'Photo de Jr  Satilite — Pexels',
   },
+  {
+    href: 'https://www.pexels.com/fr-fr/photo/ecole-de-meduses-sous-l-eau-1683724/',
+    src: 'https://images.pexels.com/photos/1683724/pexels-photo-1683724.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=120&h=120',
+    alt: 'Photo de Valdemaras D.',
+    caption: 'Photo de Valdemaras D. — Pexels',
+  },
+  {
+    href: 'https://www.pexels.com/fr-fr/photo/les-gens-au-desert-pendant-la-nuit-1703316/',
+    src: 'https://images.pexels.com/photos/1703316/pexels-photo-1703316.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=120&h=120',
+    alt: 'Photo de Tomáš Malík',
+    caption: 'Photo de Tomáš Malík — Pexels',
+  },
 ]
 
 definePageMeta({

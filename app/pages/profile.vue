@@ -6,16 +6,16 @@
         <div class="flex items-center justify-between gap-2">
           <NButton link to="/" btn="ghost-gray" size="xs">← Back</NButton>
           <div class="flex items-center gap-4">
-            <div class="min-w-[220px]">
-              <div v-if="successMessage" class="text-sm text-green-600 dark:text-green-400">{{ successMessage }}</div>
-              <div v-else-if="errorMessage" class="text-sm text-red-600 dark:text-red-400">{{ errorMessage }}</div>
+            <div class="min-w-0 sm:min-w-[220px]">
+              <div v-if="successMessage" class="text-sm truncate text-green-600 dark:text-green-400">{{ successMessage }}</div>
+              <div v-else-if="errorMessage" class="text-sm truncate text-red-600 dark:text-red-400">{{ errorMessage }}</div>
             </div>
             <div class="flex items-center gap-2">
-              <NButton :disabled="!hasChanges || isSaving" @click="onSubmit" btn="soft-gray" size="xs">
+              <NButton :disabled="!hasChanges || isSaving" @click="onSubmit" btn="soft-gray" size="sm">
                 <NIcon :name="isSaving ? 'i-lucide-loader' : 'i-lucide-save'" :class="{ 'animate-spin': isSaving }" />
                 <span class="ml-2">Save</span>
               </NButton>
-              <NButton @click="resetForm" btn="ghost-gray" size="xs">Cancel</NButton>
+              <NButton @click="resetForm" btn="ghost-gray" size="sm">Cancel</NButton>
             </div>
           </div>
         </div>
@@ -30,7 +30,7 @@
             ref="nameTextarea"
             v-model="form.name"
             rows="1"
-            class="w-full resize-none overflow-hidden text-6xl md:text-7xl lg:text-8xl font-serif font-800 leading-none bg-transparent outline-none focus:outline-none uppercase text-pink-500"
+            class="w-full resize-none overflow-hidden text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-serif font-800 leading-none bg-transparent outline-none focus:outline-none uppercase text-pink-500"
             placeholder="Your name"
             @input="autoResizeName"
           />
@@ -46,17 +46,17 @@
         </div>
 
         <div
-          class="relative group w-72 md:w-96 rounded-3xl overflow-hidden bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center border transition-colors"
+          class="relative group w-48 sm:w-64 md:w-72 lg:w-96 rounded-3xl overflow-hidden bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center border transition-colors"
           :class="avatarDragOver ? 'border-primary/60 bg-pink-100 dark:bg-pink-900/40' : 'border-transparent'"
           @dragover.prevent="onAvatarDragOver"
           @dragleave.prevent="onAvatarDragLeave"
           @drop.prevent="onAvatarDrop"
         >
           <NuxtImg v-if="displayAvatar" provider="hubblob" :src="displayAvatar" :alt="form.name" class="object-cover w-full h-full" />
-          <div v-else class="w-full h-40 md:h-64 flex items-center justify-center text-4xl font-bold text-gray-600 dark:text-gray-200">{{ userInitials }}</div>
+          <div v-else class="w-full h-40 md:h-64 flex items-center justify-center text-3xl sm:text-4xl font-bold text-gray-600 dark:text-gray-200">{{ userInitials }}</div>
           <div class="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <NButton @click="triggerAvatarFileInput" btn="solid-white" size="xs" leading="i-ph-image">Replace</NButton>
-            <NButton @click="deleteAvatar" :disabled="!form.avatar" btn="ghost-gray" size="xs" leading="i-ph-trash" color="danger">Remove</NButton>
+            <NButton @click="triggerAvatarFileInput" btn="solid-white" size="sm" leading="i-ph-image">Replace</NButton>
+            <NButton @click="deleteAvatar" :disabled="!form.avatar" btn="ghost-gray" size="sm" leading="i-ph-trash" color="danger">Remove</NButton>
           </div>
           <div v-if="avatarUploading" class="absolute left-0 bottom-0 w-full h-1 bg-black/10 rounded-b-2xl overflow-hidden">
             <div class="h-full bg-primary transition-all duration-300" :style="{ width: avatarUploadProgress + '%' }" />
@@ -70,48 +70,48 @@
           <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <!-- Email -->
             <div class="flex flex-col items-start gap-4 p-6 rounded-xl border b-dashed hover:b-solid border-gray-50 dark:border-gray-800 bg-background/50">
-              <NIcon name="i-lucide-mail" class="text-pink-500 text-4xl" />
-              <div class="uppercase text-xl font-bold text-pink-500">Email</div>
+              <NIcon name="i-lucide-mail" class="text-pink-500 text-3xl sm:text-4xl" />
+              <div class="uppercase text-lg sm:text-xl font-bold text-pink-500">Email</div>
               <div class="text-sm text-gray-500 dark:text-gray-400">Your contact address</div>
               <NInput v-model="form.email" placeholder="email@domain.com" input="~" class="bg-transparent outline-none w-full" type="email" />
             </div>
 
             <!-- Location -->
             <div class="flex flex-col items-start gap-4 p-6 rounded-xl border b-dashed hover:b-solid border-gray-50 dark:border-gray-800 bg-background/50">
-              <NIcon name="i-lucide-map-pin" class="text-pink-500 text-4xl" />
-              <div class="uppercase text-xl font-bold text-pink-500">Location</div>
+              <NIcon name="i-lucide-map-pin" class="text-pink-500 text-3xl sm:text-4xl" />
+              <div class="uppercase text-lg sm:text-xl font-bold text-pink-500">Location</div>
               <div class="text-sm text-gray-500 dark:text-gray-400">Where you’re based</div>
               <NInput v-model="form.location" placeholder="City, Country" input="~" class="bg-transparent outline-none w-full" />
             </div>
 
             <!-- Avatar URL -->
             <div class="flex flex-col items-start gap-4 p-6 rounded-xl border b-dashed hover:b-solid border-gray-50 dark:border-gray-800 bg-background/50">
-              <NIcon name="i-ph-image" class="text-pink-500 text-4xl" />
-              <div class="uppercase text-xl font-bold text-pink-500">Avatar</div>
+              <NIcon name="i-ph-image" class="text-pink-500 text-3xl sm:text-4xl" />
+              <div class="uppercase text-lg sm:text-xl font-bold text-pink-500">Avatar</div>
               <div class="text-sm text-gray-500 dark:text-gray-400">Image URL to use as avatar</div>
               <NInput v-model="form.avatar" placeholder="https://..." input="~" class="bg-transparent outline-none w-full" />
             </div>
 
             <!-- Job -->
             <div class="flex flex-col items-start gap-4 p-6 rounded-xl border b-dashed hover:b-solid border-gray-50 dark:border-gray-800 bg-background/50">
-              <NIcon name="i-lucide-briefcase" class="text-pink-500 text-4xl" />
-              <div class="uppercase text-xl font-bold text-pink-500">Job</div>
+              <NIcon name="i-lucide-briefcase" class="text-pink-500 text-3xl sm:text-4xl" />
+              <div class="uppercase text-lg sm:text-xl font-bold text-pink-500">Job</div>
               <div class="text-sm text-gray-500 dark:text-gray-400">Your current title</div>
               <NInput v-model="form.job" placeholder="Job title" input="~" class="bg-transparent outline-none w-full" />
             </div>
 
             <!-- Language -->
             <div class="flex flex-col items-start gap-4 p-6 rounded-xl border b-dashed hover:b-solid border-gray-50 dark:border-gray-800 bg-background/50">
-              <NIcon name="i-lucide-globe" class="text-pink-500 text-4xl" />
-              <div class="uppercase text-xl font-bold text-pink-500">Language</div>
+              <NIcon name="i-lucide-globe" class="text-pink-500 text-3xl sm:text-4xl" />
+              <div class="uppercase text-lg sm:text-xl font-bold text-pink-500">Language</div>
               <div class="text-sm text-gray-500 dark:text-gray-400">Preferred language code</div>
               <NInput v-model="form.language" placeholder="en" input="~" class="bg-transparent outline-none w-full" />
             </div>
 
             <!-- Socials -->
             <div class="flex flex-col items-start gap-4 p-6 rounded-xl border b-dashed hover:b-solid border-gray-50 dark:border-gray-800 bg-background/50">
-              <NIcon name="i-lucide-link" class="text-pink-500 text-4xl" />
-              <div class="uppercase text-xl font-bold text-pink-500">Socials</div>
+              <NIcon name="i-lucide-link" class="text-pink-500 text-3xl sm:text-4xl" />
+              <div class="uppercase text-lg sm:text-xl font-bold text-pink-500">Socials</div>
               <div class="text-sm text-gray-500 dark:text-gray-400">Manage your social profiles</div>
               <div class="w-full flex items-center gap-3">
                 <NButton @click="openSocialsDialog" btn="soft" size="sm">Edit socials</NButton>
@@ -121,20 +121,20 @@
 
             <!-- Biography (full-width) -->
             <div class="sm:col-span-2 lg:col-span-3 flex flex-col items-start gap-4 p-6 rounded-xl border b-dashed hover:b-solid border-gray-50 dark:border-gray-800 bg-background/50">
-              <NIcon name="i-lucide-align-left" class="text-pink-500 text-4xl" />
-              <div class="uppercase text-xl font-bold text-pink-500">Biography</div>
+              <NIcon name="i-lucide-align-left" class="text-pink-500 text-3xl sm:text-4xl" />
+              <div class="uppercase text-lg sm:text-xl font-bold text-pink-500">Biography</div>
               <div class="text-sm text-gray-500 dark:text-gray-400">A short bio shown on your profile</div>
               <NInput v-model="form.biography" input="~" type="textarea" :rows="6" class="bg-transparent outline-none w-full" />
             </div>
           </div>
 
-          <div class="flex items-center gap-3 mt-6">
-            <NButton :disabled="isSaving || !hasChanges" type="submit" btn="soft-gray">{{ isSaving ? 'Saving…' : 'Save' }}</NButton>
-            <NButton @click="resetForm" btn="ghost-gray">Reset</NButton>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-6">
+            <NButton :disabled="isSaving || !hasChanges" type="submit" btn="soft-gray" class="w-full sm:w-auto">{{ isSaving ? 'Saving…' : 'Save' }}</NButton>
+            <NButton @click="resetForm" btn="ghost-gray" class="w-full sm:w-auto">Reset</NButton>
 
-            <div class="ml-auto min-w-[220px]">
-              <div v-if="errorMessage" class="text-sm text-red-600 dark:text-red-400">{{ errorMessage }}</div>
-              <div v-if="successMessage" class="text-sm text-green-600 dark:text-green-400">{{ successMessage }}</div>
+            <div class="mt-2 sm:mt-0 ml-0 sm:ml-auto min-w-0 sm:min-w-[220px] text-sm">
+              <div v-if="errorMessage" class="text-sm truncate text-red-600 dark:text-red-400">{{ errorMessage }}</div>
+              <div v-if="successMessage" class="text-sm truncate text-green-600 dark:text-green-400">{{ successMessage }}</div>
             </div>
           </div>
         </form>
@@ -143,7 +143,7 @@
       <!-- Socials editor dialog -->
       <NDialog v-model:open="socialsDialogOpen" :closeOnEsc="true">
         <NDialogOverlay />
-        <NDialogContent class="max-w-2xl">
+          <NDialogContent class="max-w-full sm:max-w-2xl">
           <NDialogHeader>
             <NDialogTitle>Edit socials</NDialogTitle>
           </NDialogHeader>
@@ -152,7 +152,7 @@
             <div v-if="!socialsDraft.length" class="text-sm text-gray-500 dark:text-gray-400">No socials yet. Add one below.</div>
             <div v-for="(s, i) in socialsDraft" :key="i" class="flex items-center gap-3">
               <NIcon :name="platformIcon(s.platform)" class="text-2xl text-gray-500" />
-              <NInput ref="socialPlatformRefs" v-model="s.platform" placeholder="Platform (e.g. Twitter)" input="~" class="w-40" />
+              <NInput ref="socialPlatformRefs" v-model="s.platform" placeholder="Platform (e.g. Twitter)" input="~" class="w-28 sm:w-40" />
               <NInput ref="socialUrlRefs" v-model="s.url" placeholder="https://..." input="~" class="flex-1" />
               <NButton @click="removeSocialRow(i)" btn="ghost" size="xs" icon label="i-lucide-x" />
             </div>
