@@ -6,7 +6,9 @@
         <div v-if="isAdmin" class="sticky top-4 z-12 mb-10">
           <div class="bg-background/60 backdrop-blur-sm border border-border rounded-2xl px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
             <div class="flex items-center gap-2">
-              <NButton @click="isNewDrawerOpen = true" btn="soft-gray" size="sm" leading="i-ph-plus-bold">New Post</NButton>
+              <NButton @click="isNewDrawerOpen = true" btn="outline-gray" size="xs" leading="i-ph-plus-bold">
+                <span class="hidden md:inline">New Project</span>
+              </NButton>
               <NewPostDrawer v-model="isNewDrawerOpen" @created="onPostCreated" defaultTag="project" />
             </div>
           </div>

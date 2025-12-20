@@ -23,14 +23,16 @@
 
           <!-- Tags/Badges -->
           <div class="flex items-center justify-center flex-wrap gap-3">
-            <div
+            <NuxtLink
               v-for="tag in post.tags"
               :key="tag.id"
-              class="uppercase bg-[#F2F3F4] text-color-black dark:bg-gray-600 dark:text-color-white rounded-full px-4 py-1 text-xs font-semibold flex items-center"
+              :to="{ path: '/tags', query: { tag: tag.name } }"
+              class="uppercase bg-[#F2F3F4] text-color-black dark:bg-gray-600 dark:text-color-white rounded-full px-4 py-1 text-xs font-semibold flex items-center transition-transform hover:scale-105"
+              :aria-label="`View posts for tag ${tag.name}`"
             >
               <NIcon v-if="iconTag[tag.name]" :name="iconTag[tag.name]" />
               <span>{{ tag.name }}</span>
-            </div>
+            </NuxtLink>
             <NTooltip v-if="isAdmin" content="Edit post">
                 <NButton
                 size="xs"

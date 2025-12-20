@@ -31,19 +31,19 @@
         <div class="mt-4 max-w-3xl mx-auto">
           <div class="relative mt-3">
             <div class="flex justify-center items-center gap-2 flex-wrap">
-              <span v-for="tag in localTags" :key="tag.id" class="inline-flex items-center gap-2 px-3 py-1 text-sm bg-blue dark:bg-black dark:border rounded-full">
+              <span v-for="tag in localTags" :key="tag.id" class="inline-flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 dark:bg-black dark:border rounded-full">
                 <span class="uppercase font-semibold text-xs">{{ tag.name }}</span>
                 <button aria-label="Remove tag" @click="removeTag(tag.id)" :disabled="isAssigningTags" class="text-xs opacity-70 hover:opacity-100">✕</button>
               </span>
 
-              <div v-if="editingTagActive" class="inline-flex items-center gap-2 px-3 py-1 text-sm bg-blue dark:bg-black rounded-full">
+              <div v-if="editingTagActive" class="inline-flex items-center gap-2 px-3 py-1 text-sm dark:bg-black rounded-full">
                 <input
                   ref="editingInputRef"
                   v-model="editingTagName"
                   @keydown.enter.prevent="addTagByName(editingTagName)"
                   @keydown.esc.prevent="cancelNewTag"
                   @blur="editingTagName ? addTagByName(editingTagName) : cancelNewTag"
-                  class="bg-transparent outline-none border px-2 py-1 rounded-full text-sm"
+                  class="bg-transparent outline-none border px-4 py-1 rounded-full text-sm"
                   placeholder="Tag name"
                 />
                 <button @click="cancelNewTag" class="text-xs opacity-70 hover:opacity-100">✕</button>

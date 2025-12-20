@@ -7,10 +7,11 @@
     <section class="space-y-10 px-4 pb-16">
       <MobileProjectsGrid />
       <RecentPostsGrid />
+      <NewsletterSubscription />
+
+      <div>
+        <NButton btn="solid-blue" to="/donate" class="w-full py-6" rounded="6" label="Donate Now" trailing="i-ph-cursor-click-duotone" />
+      </div>
     </section>
   </div>
 </template>
-
-<script setup lang="ts">
-// Components are auto-imported by Nuxt; no script logic needed here.
-</script>

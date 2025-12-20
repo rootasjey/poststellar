@@ -1,9 +1,22 @@
 <template>
-  <section class="py-12 md:py-16 bg-white dark:bg-gray-950">
+  <section class="py-12 md:py-16">
     <div class="container mx-auto px-4 max-w-7xl">
-      <h2 class="text-xs md:text-sm font-semibold tracking-wider mb-2 uppercase text-gray-900 dark:text-gray-100">
-        Recent Posts
-      </h2>
+      <div class="flex items-center justify-between px-1 mb-6">
+        <NuxtLink to="/posts" class="inline-block">
+          <h2 class="text-[11px] uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
+            Recent Posts
+          </h2>
+        </NuxtLink>
+
+        <NuxtLink
+          to="/posts"
+          class="text-[11px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 flex items-center gap-1"
+          aria-label="View all posts"
+        >
+          <span>See all</span>
+          <NIcon name="i-ph-arrow-up-right" />
+        </NuxtLink>
+      </div>
 
       <!-- Loading -->
       <div v-if="pending" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 sm:gap-x-6 gap-y-8 md:gap-y-12">
@@ -51,7 +64,8 @@
           <NuxtLink :to="`/posts/${post.slug}`" class="block flex flex-col h-full">
             <!-- Image -->
             <div v-if="post.image?.src" class="relative overflow-hidden rounded-2xl aspect-[4/3] mb-4">
-              <img
+              <NuxtImg
+                :provider="post.image.src.startsWith('/posts/') ? 'hubblob' : undefined"
                 :src="post.image.src"
                 :alt="post.image.alt || post.name"
                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"

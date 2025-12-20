@@ -6,8 +6,12 @@
         <div v-if="isAdmin" class="sticky top-4 z-12 mb-10">
           <div class="bg-background/60 backdrop-blur-sm border border-border rounded-2xl px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
             <div class="flex items-center gap-2">
-              <NButton @click="isNewDrawerOpen = true" btn="outline-gray" size="xs" rounded="2" leading="i-ph-plus-bold">New Post</NButton>
-              <NButton @click="triggerImportFile" btn="outline-gray" size="xs"  rounded="2" leading="i-ph-file-arrow-up">Import</NButton>
+              <NButton @click="isNewDrawerOpen = true" btn="outline-gray" size="xs" rounded="2" leading="i-ph-plus-bold">
+                <span class="hidden md:inline">New Post</span>
+              </NButton>
+              <NButton @click="triggerImportFile" btn="outline-gray" size="xs"  rounded="2" leading="i-ph-file-arrow-up">
+                <span class="hidden md:inline">Import</span>
+              </NButton>
               <template v-if="selectionMode">
                 <span>•</span>
                 <NDropdownMenu :items="exportDropdownItems" :_dropdownMenuContent="{ side: 'bottom', align: 'start' }">
@@ -80,8 +84,8 @@
       </div>
 
       <!-- Posts list (grid cards) -->
-      <div v-if="activeTab === 'published' && posts && posts.length > 0" class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-for="post in enhancedPosts" :key="post.slug" class="relative" @pointerdown="startLongPress(post.slug)" @pointerup="cancelLongPress" @pointercancel="cancelLongPress" @mouseleave="cancelLongPress">
+      <div v-if="activeTab === 'published' && posts && posts.length > 0" class="max-w-7xl mx-auto columns-1 sm:columns-2 lg:columns-3">
+        <div v-for="post in enhancedPosts" :key="post.slug" class="relative inline-block w-full mb-6 break-inside-avoid" @pointerdown="startLongPress(post.slug)" @pointerup="cancelLongPress" @pointercancel="cancelLongPress" @mouseleave="cancelLongPress">
           <ClientOnly>
             <div v-if="isAdmin && selectionMode" class="absolute right-12 top-5 z-2">
               <NCheckbox :model-value="selectedSlugs.has(post.slug)" @update:model-value="toggleSelected(post.slug)" />
@@ -91,7 +95,7 @@
             :to="`/posts/${post.slug}`"
             @click="(e: MouseEvent) => onPostCardClick(e, post)"
             :class="[
-              'group block bg-background border border-border rounded-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-101 active:scale-99',
+              'group block bg-background border border-border rounded-lg overflow-hidden hover:shadow-xl hover:scale-101 transition-all duration-300 transform active:scale-99 active:shadow-none',
               { 
                 'scale-90': duplicatingPosts.has(post.slug), 
                 'pointer-events-none opacity-70': duplicatingPosts.has(post.slug) 
@@ -100,9 +104,9 @@
             :aria-busy="duplicatingPosts.has(post.slug)"
           >
             <article class="h-full flex flex-col items-stretch relative">
-            <!-- Image -->
-            <div v-if="post.image?.src" class="w-full md:w-48 overflow-hidden flex-shrink-0">
-              <img
+            <div v-if="post.image?.src" class="w-full overflow-hidden flex-shrink-0">
+              <NuxtImg
+                :provider="post.image.src.startsWith('/posts/') ? 'hubblob' : undefined"
                 :src="post.image.src"
                 :alt="post.image.alt || post.name"
                 class="w-full h-full object-cover aspect-[16/10] transition-transform duration-500 group-hover:scale-110"
@@ -118,7 +122,7 @@
                 <NBadge badge="soft" color="warning">Duplicating…</NBadge>
               </div>
               <!-- Title -->
-              <h2 class="text-2xl font-bold mb-3 line-clamp-2 group-hover:text-primary transition-colors">
+              <h2 class="text-2xl font-bold mb-3 line-clamp-2">
                 {{ post.name }}
               </h2>
 
@@ -140,9 +144,9 @@
               </div>
 
               <!-- Meta -->
-              <div class="flex items-center justify-between pt-4 border-t border-border mt-4">
+              <div class="flex items-center justify-between pt-4 border-t b-dashed border-border mt-4">
                 <div v-if="post.user" class="flex items-center gap-3">
-                  <img
+                  <NuxtImg
                     v-if="post.user.avatar"
                     :src="post.user.avatar"
                     :alt="post.user.name || 'User'"
@@ -221,8 +225,8 @@
           </p>
         </div>
 
-        <div v-if="enhancedDrafts.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="post in enhancedDrafts" :key="post.slug" class="relative" @pointerdown="startLongPress(post.slug)" @pointerup="cancelLongPress" @pointercancel="cancelLongPress" @mouseleave="cancelLongPress">
+        <div v-if="enhancedDrafts.length > 0" class="columns-1 sm:columns-2 lg:columns-3">
+          <div v-for="post in enhancedDrafts" :key="post.slug" class="relative inline-block w-full mb-6 break-inside-avoid" @pointerdown="startLongPress(post.slug)" @pointerup="cancelLongPress" @pointercancel="cancelLongPress" @mouseleave="cancelLongPress">
             <div v-if="isAdmin && selectionMode" class="absolute right-12 top-5 z-2">
               <NCheckbox :model-value="selectedSlugs.has(post.slug)" @update:model-value="toggleSelected(post.slug)" />
             </div>
@@ -239,7 +243,11 @@
             >
               <article class="h-full flex flex-col items-stretch relative">
               <div v-if="post.image?.src" class="w-full overflow-hidden">
-                <img :src="post.image.src" :alt="post.image.alt || post.name" class="w-full h-full object-cover aspect-[16/10] transition-transform duration-500 group-hover:scale-110" />
+                <NuxtImg 
+                  :provider="post.image.src.startsWith('/posts/') ? 'hubblob' : undefined" 
+                  :src="post.image.src" :alt="post.image.alt || post.name" 
+                  class="w-full h-full object-cover aspect-[16/10] transition-transform duration-500 group-hover:scale-110" 
+                />
               </div>
               <div class="flex-1 p-4 flex flex-col">
                 <!-- Admin dropdown control is rendered outside the link to avoid being blocked by overlay -->
@@ -280,15 +288,19 @@
       <ClientOnly>
         <div v-if="isAdmin && activeTab === 'archived'" class="mt-6 max-w-7xl mx-auto">
         <h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><span class="i-ph-archive" />Archived</h2>
-        <div v-if="enhancedArchived.length > 0" class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="post in enhancedArchived" :key="post.slug" class="relative" @pointerdown="startLongPress(post.slug)" @pointerup="cancelLongPress" @pointercancel="cancelLongPress" @mouseleave="cancelLongPress">
+        <div v-if="enhancedArchived.length > 0" class="max-w-7xl mx-auto columns-1 sm:columns-2 lg:columns-3">
+            <div v-for="post in enhancedArchived" :key="post.slug" class="relative inline-block w-full mb-6 break-inside-avoid" @pointerdown="startLongPress(post.slug)" @pointerup="cancelLongPress" @pointercancel="cancelLongPress" @mouseleave="cancelLongPress">
               <div v-if="isAdmin && selectionMode" class="absolute right-12 top-5 z-2">
                 <NCheckbox :model-value="selectedSlugs.has(post.slug)" @update:model-value="toggleSelected(post.slug)" />
               </div>
               <NLink :to="`/posts/${post.slug}`" @click="(e: MouseEvent) => onPostCardClick(e, post)" :class="['group block bg-background border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 opacity-80 relative transform hover:scale-101 active:scale-99', { 'scale-90 pointer-events-none opacity-70': duplicatingPosts.has(post.slug) }]" :aria-busy="duplicatingPosts.has(post.slug)">
                 <article class="h-full flex flex-col items-stretch">
                   <div v-if="post.image?.src" class="w-full overflow-hidden grayscale">
-                    <img :src="post.image.src" :alt="post.image.alt || post.name" class="w-full h-full object-cover aspect-[16/10] transition-transform duration-500 group-hover:scale-110" />
+                    <NuxtImg 
+                      :provider="post.image.src.startsWith('/posts/') ? 'hubblob' : undefined" 
+                      :src="post.image.src" :alt="post.image.alt || post.name" 
+                      class="w-full h-full object-cover aspect-[16/10] transition-transform duration-500 group-hover:scale-110"
+                    />
                   </div>
                   <div class="flex-1 p-6 flex flex-col">
                     
@@ -784,4 +796,13 @@ function onPostCardClick(evt: MouseEvent, post: Post) {
   75% { -webkit-text-stroke-color: #B7A3E3; }
   100% { -webkit-text-stroke-color: #FF8F8F; }
 }
+
+.break-inside-avoid {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
+  display: inline-block;
+  width: 100%;
+}
+
 </style>

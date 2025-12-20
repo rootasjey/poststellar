@@ -2,15 +2,18 @@
   <section class="mt-6 space-y-5">
     <div class="flex items-center justify-between px-1">
       <div>
-        <p class="text-[11px] uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Projects</p>
+        <NuxtLink to="/projects" class="inline-block mb-1">
+          <h2 class="text-[11px] uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Projects</h2>
+        </NuxtLink>
       </div>
+      
       <NuxtLink
         to="/projects"
-        class="text-sm font-semibold text-gray-500 flex items-center gap-1"
+        class="text-[11px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 flex items-center gap-1"
         aria-label="View all projects"
       >
         <span>See all</span>
-        <div class="i-ph-arrow-up-right-bold text-base"></div>
+        <NIcon name="i-ph-arrow-up-right" />
       </NuxtLink>
     </div>
 
@@ -49,15 +52,15 @@
       <div
         v-for="(chunk, chunkIndex) in projectChunks"
         :key="chunkIndex"
-        class="grid grid-cols-2 gap-3 min-w-[calc(100vw-4rem)] flex-shrink-0 snap-start rounded-3xl border border-gray-200/60 bg-white/80 p-4 shadow-[0_12px_35px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-gray-900/80"
+        class="grid grid-cols-2 gap-3 min-w-[calc(100vw-4rem)] flex-shrink-0 snap-start rounded-3xl border border-gray-200/60 bg-white/80 p-4 dark:border-white/10 dark:bg-gray-900/80"
       >
         <NuxtLink
           v-for="project in chunk"
           :key="project.slug"
           :to="`/posts/${project.slug}`"
-          class="flex flex-col items-center gap-3 rounded-2xl border border-white/70 bg-gradient-to-b from-slate-50/80 to-white/90 p-3 text-center transition hover:border-primary/60 dark:border-white/10 dark:from-white/5 dark:to-white/0"
+          class="flex flex-col items-center gap-3 rounded-2xl bg-gradient-to-b from-slate-50/80 to-white/90 p-3 text-center transition hover:border-primary/60 dark:border-white/10 dark:from-white/5 dark:to-white/0"
         >
-          <div class="h-26 w-26 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 shadow-md">
+          <div class="h-26 w-26 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 shadow-md hover:shadow-lg hover:scale-105 active:scale-99 active:shadow-none transition-all">
             <NuxtImg
               :src="project.image"
               :alt="project.title"

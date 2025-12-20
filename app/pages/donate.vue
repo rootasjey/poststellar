@@ -39,7 +39,7 @@
           <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400">Recurring?</h3>
           <div class="flex items-center gap-3 mt-2">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" v-model="recurring" class="form-checkbox" />
+              <NSwitch v-model="recurring" switch-checked="blue" />
               <span class="text-sm text-slate-700 dark:text-slate-300">Make this a recurring monthly donation</span>
             </label>
           </div>
@@ -66,7 +66,7 @@
           </div>
 
           <div class="flex items-center gap-3">
-            <NButton type="submit" btn="solid-green">Donate {{ formatAmount(displayAmount) }}</NButton>
+            <NButton type="submit" btn="solid-blue">Donate {{ formatAmount(displayAmount) }}</NButton>
             <NButton btn="ghost" @click.prevent="resetForm">Reset</NButton>
           </div>
 

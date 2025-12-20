@@ -3,11 +3,16 @@
     <section class="py-12 md:py-16 bg-white dark:bg-gray-950">
       <div class="container mx-auto px-6 max-w-7xl">
         <h1 class="text-3xl md:text-4xl font-serif font-800 mb-2">Tags</h1>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-8">Browse all tags and discover posts grouped by topic.</p>
+        <div class="flex items-center justify-between mb-8">
+          <p class="text-sm text-gray-600 dark:text-gray-400 mr-4">Browse all tags and discover posts grouped by topic.</p>
+          <div class="lg:hidden">
+            <NButton btn="outline-gray" size="xs" rounded="2" leading="i-ph-tag" @click="tagsDrawerOpen = true">Filters</NButton>
+          </div>
+        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           <!-- Tags column -->
-          <aside class="md:col-span-1">
+          <aside class="hidden md:block md:col-span-1">
             <ClientOnly>
               <div v-if="isAdmin" class="sticky top-6 z-20 mb-4">
                 <div class="bg-background/60 backdrop-blur-sm border border-border rounded-2xl px-3 py-2 flex items-center justify-between gap-3">
@@ -125,12 +130,43 @@
             </div>
 
             <div v-if="!visiblePosts.length && !postsPending && !postsError" class="mt-12 text-center text-gray-600 dark:text-gray-400">
-              No posts found for this tag.
+              <h2 class="text-size-12 font-200">No posts found for this tag.</h2>
+              <NButton 
+                v-if="route.query.tag"
+                btn="ghost-gray" 
+                size="sm" 
+                @click="selectTag(null)"
+              >
+                View all posts
+              </NButton>
+              <NButton 
+                v-else
+                btn="ghost-gray" 
+                size="sm" 
+                @click="router.push('/posts')"
+              >
+                Create a post
+              </NButton>
             </div>
           </main>
         </div>
       </div>
     </section>
+
+  <ClientOnly>
+    <TagsDrawer
+      v-model:open="tagsDrawerOpen"
+      v-model:search="search"
+      :tags="tags"
+      :selectedTag="selectedTag"
+      :tagCounts="tagCounts"
+      :is-admin="isAdmin"
+      @select="(name) => (selectTag(name), tagsDrawerOpen = false)"
+      @new="openNewTag"
+      @edit="openEditTag"
+      @delete="onDeleteFromDrawer"
+    />
+  </ClientOnly>
 
   <NDialog v-model:open="tagDialogOpen">
     <NDialogContent class="max-w-md">
@@ -180,6 +216,7 @@ import type { Post as ApiPost } from '~~/shared/types/post'
 const { enhancePost } = usePost()
 
 import { useRoute, useRouter } from 'vue-router'
+import TagsDrawer from '~~/app/components/TagsDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -252,6 +289,7 @@ const saving = ref(false)
 const confirmDialogOpen = ref(false)
 const tagPendingDelete = ref<ApiTag | null>(null)
 const deleting = ref(false)
+const tagsDrawerOpen = ref(false)
 
 const filteredTags = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -316,6 +354,11 @@ function menuItemsForTag(tag: ApiTag) {
     { label: 'Edit', onSelect: () => openEditTag(tag), leading: 'i-ph-pencil' },
     { label: 'Delete', onSelect: () => (tagPendingDelete.value = tag, confirmDialogOpen.value = true), leading: 'i-ph-trash', color: 'danger' },
   ]
+}
+
+function onDeleteFromDrawer(tag: ApiTag) {
+  tagPendingDelete.value = tag
+  confirmDialogOpen.value = true
 }
 
 async function saveTag() {

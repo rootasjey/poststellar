@@ -13,7 +13,7 @@
     <main class="flex-1 pb-20 md:pb-0">
       <slot />
     </main>
-    <AppFooter />
+    <AppFooter class="hidden md:block" />
     <MobileBottomNav class="lg:hidden" />
   </div>
 </template>

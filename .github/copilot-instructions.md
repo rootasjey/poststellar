@@ -49,7 +49,15 @@ postellar/
 - Prefer guard clauses and small helpers instead of deeply nested if/else. Keep function bodies short and focused — if additional branches are required, extract the branch logic into a helper with a descriptive name so the main flow remains easy to read and test.
 - Do not leave comments describing previous implementations or “moved code” history in new commits. The code should be self-explanatory; use concise comments for intent only (not history). If you need to describe why a change was made, prefer a clear commit message or issue reference.
 
-## Dev workflows
+- When you need two-way binding for a prop inside a child component, do NOT bind `v-model` directly to the prop (props are readonly). Instead create a local computed getter/setter that reads the prop and emits `update:<propName>` in the setter, then bind that computed to inner `v-model`. Example:
+
+```ts
+const isOpen = computed({
+  get: () => props.open,
+  set: (v: boolean) => emits('update:open', v),
+})
+
+```## Dev workflows
 - Scripts (see `package.json`):
   - `bun run dev` (or `npm run dev`) – start local dev server.
   - `bun run build` – production build.

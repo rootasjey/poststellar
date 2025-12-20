@@ -2,12 +2,12 @@
   <div v-if="post" class="min-h-screen">
     <!-- Top action bar -->
     <div class="sticky top-0 z-30 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div class="container mx-auto px-4 md:px-8 py-3">
+      <div class="container mx-auto px-4 md:px-8 py-2 md:py-3">
         <div class="flex items-center justify-between gap-2">
-          <NButton link to="/posts" btn="ghost-gray" size="xs">
-            <span class="i-ph-arrow-bend-down-left-bold" /> All Posts
+          <NButton link to="/posts" btn="ghost-gray" size="xs" class="px-2">
+            <span class="i-ph-arrow-bend-down-left-bold" /> <span class="hidden sm:inline">All Posts</span>
           </NButton>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1 md:gap-2">
             <NTooltip :content="undoTooltip">
               <NButton
                 @click="undoEditor"
@@ -30,14 +30,18 @@
                 size="xs"
               />
             </NTooltip>
-            <NButton :to="`/posts/${post.slug}`" btn="~" size="xs" class="border b-dashed hover:b-solid" target="_blank">
-              <span class="i-lucide-external-link mr-2" />Preview
-            </NButton>
-            <NDropdownMenu :items="exportMenuItems" :_dropdownMenuContent="{ side: 'bottom' }">
-              <NButton btn="~" size="xs" class="border b-dashed hover:b-solid">
-                <NIcon :name="exportingZip ? 'i-lucide-loader' : 'i-ph-download-simple'" :class="{ 'animate-spin': exportingZip }" />
+
+            <div class="hidden sm:flex items-center gap-2">
+              <NButton :to="`/posts/${post.slug}`" btn="~" size="xs" class="border b-dashed hover:b-solid" target="_blank">
+                <span class="i-lucide-external-link mr-2" /><span class="hidden sm:inline">Preview</span>
               </NButton>
-            </NDropdownMenu>
+              <NDropdownMenu :items="exportMenuItems" :_dropdownMenuContent="{ side: 'bottom' }">
+                <NButton btn="~" size="xs" class="border b-dashed hover:b-solid">
+                  <NIcon :name="exportingZip ? 'i-lucide-loader' : 'i-ph-download-simple'" :class="{ 'animate-spin': exportingZip }" />
+                </NButton>
+              </NDropdownMenu>
+            </div>
+
             <NButton @click="saveAll" btn="~" size="xs" :disabled="saving || !name || !slug" class="border b-dashed hover:b-solid" >
               <NIcon :name="saving ? 'i-lucide-loader' : 'i-lucide-save'" :class="{ 'animate-spin': saving }" />
             </NButton>
